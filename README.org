@@ -1,0 +1,1 @@
+#+TITLE: Stochastic Average Gradient Descent

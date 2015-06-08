@@ -1,0 +1,31 @@
+#!/usr/bin/env Rscript
+rm(list=ls())
+## * Package setup
+library(methods, quietly=TRUE)  ## hasArgs is not loaded by default by Rscript
+library(devtools, quietly=TRUE)
+pkg_path <-  "."
+try(unload(pkg_path))
+document(pkg_path)
+load_all(pkg_path)
+## * Generating data
+## Sampling data
+## Parameters
+
+true_params <- 1:3
+sample_size <- 1000
+sim <- .simulate_logistic(true_params=true_params,
+                          sample_size=sample_size,
+                          intercept=FALSE)
+## Fitting with glm
+glm_fit <- glm.fit(sim$X, (sim$y + 1)/2, family=binomial())
+lambda <- 0
+sag_fit <- sag_constant(X=sim$X,
+                        y=sim$y,
+                        lambda=lambda)
+
+print("True Parameters:")
+print(true_params)
+print("Estimated parameters glm:")
+print(coef(glm_fit))
+print("Estimated parameters (SAG):")
+print(sag_fit$w)
