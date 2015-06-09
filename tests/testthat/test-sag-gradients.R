@@ -7,15 +7,23 @@ L2regularized.logistic.regression.gradient <- function(X, y, lambda, weight){
   stop("TODO compute gradient in R code")
 }
 
-data(rcv1_train)
-
-test_that("gradient of rcv1", {
+data(covtype.libsvm)
+test_that("gradient of covtype.libsvm is close to 0", {
   lambda <- 1
-  X <- as.matrix(rcv1_train$X)
-  pryr::mem_change({
-    fit <- sag_constant(X, rcv1_train$y, lambda)
+  fit <- with(covtype.libsvm, sag_constant(X, y, lambda))
+  gradient <- with(covtype.libsvm, {
+    L2regularized.logistic.regression.gradient(X, y, lambda, fit$w)
   })
-  gradient <- L2regularized.logistic.regression.gradient()
+  expect_less_than(sum(abs(gradient)), eps)
+})
+
+data(rcv1_train)
+test_that("gradient of rcv1_train is close to 0", {
+  lambda <- 1
+  fit <- with(rcv1_train, sag_constant(X, y, lambda))
+  gradient <- with(rcv1_train, {
+    L2regularized.logistic.regression.gradient(X, y, lambda, fit$w)
+  })
   expect_less_than(sum(abs(gradient)), eps)
 })
 
