@@ -1,0 +1,26 @@
+## Travis configuration file for bigoptim
+
+language: r
+
+sudo: required
+
+warnings_are_errors: false
+
+r_build_args: "--no-build-vignettes --no-manual"
+r_check_args: "--no-build-vignettes --no-manual --as-cran"
+
+r_packages:
+ - devtools
+ - testthat
+
+r_github_packages:
+ - hadley/devtools
+ - hadley/testthat
+ - jimhester/covr
+
+after_success:
+  - Rscript -e 'library(covr);coveralls()'
+notifications:
+ email:
+  on_success: always
+  on_failure: always
