@@ -1,1 +1,11 @@
 #+TITLE: Stochastic Average Gradient Descent
+
+[[https://travis-ci.org/IshmaelBelghazi/bigpoptim][https://travis-ci.org/IshmaelBelghazi/bigoptim.svg]]
+
+* Description
+
+* Setup
+#+BEGIN_SRC R
+devtools::install_github("IshmaelBelghazi/bigoptim")
+#+END_SRC
+  
