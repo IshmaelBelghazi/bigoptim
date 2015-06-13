@@ -7,9 +7,9 @@ L2regularized.logistic.regression.gradient <- function(X, y, lambda, weight) {
     ## FIXME(Ishmael): Something is amiss here. Gradient norm larger
     ## than that of the approximate gradient.
     weight <- matrix(weight, ncol=1)
-    p_y_given_X <- 1/(1 + exp(y * (X %*% weight)))
-    grads <- -diag(c(y * p_y_given_X)) %*% X
-
+    p_y_given_X <- 1/(1 + exp(-y * (X %*% weight)))
+    grads <- diag(c(y * p_y_given_X)) %*% X
+    
     colMeans(grads) + 0.5 * lambda * weight 
 }
 
