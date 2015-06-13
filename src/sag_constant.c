@@ -33,7 +33,7 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   size_t * jc, * ir;
 
   double * w, * Xt, * y, lambda, alpha, innerProd, sig,
-      c=1, *g, *d, nCovered=0, * cumsum, scaling;
+    c=1, *g, *d, nCovered=0, * cumsum, scaling;
 
   /*======\
   | Input |
@@ -80,8 +80,10 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (sparse && alpha * lambda == 1) {
     error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
+  /* Allocate Memory Needed for lazy update */
+  if (sparse) {
   // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
-
+  }
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
