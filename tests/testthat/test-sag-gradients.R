@@ -3,8 +3,14 @@ context("Gradient tests")
 ## test parameters
 eps <- 1e-08
 
-L2regularized.logistic.regression.gradient <- function(X, y, lambda, weight){
-  stop("TODO compute gradient in R code")
+L2regularized.logistic.regression.gradient <- function(X, y, lambda, weight) {
+    ## FIXME(Ishmael): Something is amiss here. Gradient norm larger
+    ## than that of the approximate gradient.
+    weight <- matrix(weight, ncol=1)
+    p_y_given_X <- 1/(1 + exp(y * (X %*% weight)))
+    grads <- -diag(c(y * p_y_given_X)) %*% X
+
+    colMeans(grads) + 0.5 * lambda * weight 
 }
 
 data(covtype.libsvm)
@@ -38,7 +44,7 @@ sim <- .simulate_logistic(true_params, sample_size, intercept=FALSE)
 test_that("constant step size Sag gradient norm is zero", {
   ## Fitting SAG
   pryr::mem_change({
-    sag_fit <- sag_constant(sim$X, sim$y, lambda=0, maxiter=NROW(sim$X) * 100)
+    sag_fit <- sag_constant(sim$X, sim$y, lambda=0, maxiter=NROW(sim$X) * 1000)
   })
   
   expect_less_than(norm(sag_fit$d, type="F"), eps)

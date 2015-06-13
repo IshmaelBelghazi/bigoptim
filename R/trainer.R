@@ -21,7 +21,7 @@ sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
                          d=NULL, g=NULL, covered=NULL) {
-    if (grep("CMatrix", class(X)) > 0) {
+    if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
     }
     if (is.null(maxiter)) {
