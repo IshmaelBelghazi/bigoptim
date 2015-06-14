@@ -20,12 +20,11 @@ const int DEBUG = 0;
  *     @param covered_s(n, 1) whether the example has been visited
  *     @param stepSizeType_s scalar default is 1 to use 1/L, set to 2 to
  *     use 2/(L + n*myu)
- *     @param xtx_s squared norm of features   
  *     @return optimal weights (p, 1)
  */
 SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
                   SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                  SEXP covered_s, SEXP stepSizeType_s, SEXP xtx_s) {
+                  SEXP covered_s, SEXP stepSizeType_s) {
   // Initializing protection counter
   int nprot = 0;
   /* Variables  */
@@ -55,11 +54,12 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   g = REAL(g_s);
   covered = INTEGER(covered_s);
   if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
-  // Mark deal with stepSizeType and xtx as optional arguments. This
+  // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
   stepSizeType = * INTEGER(stepSizeType_s);
   // TODO(Ishmael): Consider where to handle xtx
+  //TODO(Ishmael): Allocate for xtx
   /* Compute sizes */
   nSamples = INTEGER(GET_DIM(Xt_s))[1];
   nVars = INTEGER(GET_DIM(Xt_s))[0];
@@ -116,14 +116,100 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     /* Select next training example */
     i = iVals[k] - 1;
     if (sparse && k > 0) {
-      //TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 132
+      //TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 119
     }
-       
+    /* Compute derivative of loss */
+    if (sparse) {
+      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 132
+    } else {
+      innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
+    }
+
+    sig = -y[i]/(1+exp(y[i]*innerProd));
+    /* Update Direction */
+    if (sparse) {
+      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 144
+    } else {
+      scaling = sig - g[i];
+      F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
+    }
+    /* Store Derivatives of loss */
+    g[i] = sig;
+    /* Update the number of examples that we have seen */
+    if (covered[i]==0) {
+      covered[i]=1; nCovered++;
+    }
+
+    /* Line-search for Li */
+    fi = log(1 + exp(-y[i] * innerProd));
+    /* Compute f_new as the function value obtained by taking 
+     * a step size of 1/Li in the gradient direction */
+    wtx = innerProd;
+    gg = sig * sig * xtx[i];
+    innerProd = wtx - xtx[i]*sig/(*Li);
+    fi_new = log(1 + exp(-y[i]*innerProd));
+    if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
+    while (gg > precision && fi_new > fi - gg/(2*(*Li))) {
+      If (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
+      *Li *= 2;
+      innerProd = wtx - xtx[i] * sig/(*Li);
+      fi_new = log(1 + exp(-y[i] * innerProd));
+    }
+
+    /* Compute step size */
+    if (stepSizeType == 1) {
+      alpha = 1/(*Li + lambda);
+    }
+    else {
+      alpha = 2/(*Li + (nSamples + 1) * lambda);       
+    }
+    /* Update Parameters */
+    if (sparse) {
+      // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 187
+    } else {
+      scaling = 1 - alpha * lambda;
+      dscal(&nVars, &scaling, w, &one);
+      scaling = -alpha/nCovered;
+      daxpy(&nVars, &scaling, d, &one, w, &one);
+    }
+
+    /* Decrease value of Lipschitz constant */
+    *Li *= pow(2.0,-1.0/nSamples);
+    
   }
 
+  if (sparse) {
+    // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 208
+  }
 
+  /*=======\
+  | Return |
+  \=======*/
+  /* Preparing return variables  */
+  SEXP w_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
+  Memcpy(REAL(w_return), w, nVars);
+  SEXP d_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
+  Memcpy(REAL(d_return), d, nVars);
+  SEXP g_return = PROTECT(allocMatrix(REALSXP, nSamples, 1)); nprot++;
+  Memcpy(REAL(g_return), g, nSamples);
+  SEXP covered_return = PROTECT(allocMatrix(INTSXP, nSamples, 1)); nprot++;
+  Memcpy(INTEGER(covered_return), covered, nSamples);
 
-  
-  
-  return NULL;
+  /* Assigning variables to list */
+  SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
+  SET_VECTOR_ELT(results, 0, w_return);
+  SET_VECTOR_ELT(results, 1, d_return);
+  SET_VECTOR_ELT(results, 2, g_return);
+  SET_VECTOR_ELT(results, 3, covered_return);
+  /* Setting list names */
+  SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
+  const char * names[4] = {"w", "d", "g", "covered"};
+  for (int i = 0; i < 4; i++) {
+  SET_STRING_ELT(results_names, i, mkChar(names[i]));
+  }
+  setAttrib(results, R_NamesSymbol, results_names);
+  // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
+  UNPROTECT(nprot);
+
 }
+

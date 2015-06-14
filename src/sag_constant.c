@@ -163,7 +163,7 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   const char * names[4] = {"w", "d", "g", "covered"};
   for (int i = 0; i < 4; i++) {
   SET_STRING_ELT(results_names, i, mkChar(names[i]));
-}
+  }
   setAttrib(results, R_NamesSymbol, results_names);
 
   // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
