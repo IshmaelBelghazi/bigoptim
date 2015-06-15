@@ -10,7 +10,7 @@ const int DEBUG = 0;
  *     Logistic regression stochastic average gradient trainer
  *    
  *     @param w_s(p, 1) weights
- *     @param Xt_s(p, n) real fature matrix
+ *     @param Xt_s(p, n) real feature matrix
  *     @param y_s(n, 1) {-1, 1} target matrix
  *     @param lambda_s scalar regularization parameters
  *     @param stepSizeType_s scalar constant step size
@@ -33,12 +33,13 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   
   long i, j;
   int nVars, one = 1; // With long clang complains about pointer type incompability
-
+ 
   size_t * jc, * ir;
-
+  
   double * w, * Xt, * y, lambda, * Li, alpha, innerProd, sig,
-    c=1, *g, *d, nCovered=0, * cumsum, fi, fi_new, gg, precision, scaling, wtx, * xtx;
+    c=1, *g, *d, nCovered=0, * cumsum, fi, fi_new, gg, precision, scaling, wtx;
 
+  double * xtx = Calloc(nSamples, double)
   /*======\
   | Input |
   \======*/
@@ -58,8 +59,6 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
   stepSizeType = * INTEGER(stepSizeType_s);
-  // TODO(Ishmael): Consider where to handle xtx
-  //TODO(Ishmael): Allocate for xtx
   /* Compute sizes */
   nSamples = INTEGER(GET_DIM(Xt_s))[1];
   nVars = INTEGER(GET_DIM(Xt_s))[0];
@@ -146,10 +145,10 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
      * a step size of 1/Li in the gradient direction */
     wtx = innerProd;
     gg = sig * sig * xtx[i];
-    innerProd = wtx - xtx[i]*sig/(*Li);
-    fi_new = log(1 + exp(-y[i]*innerProd));
+    innerProd = wtx - xtx[i] * sig/(*Li);
+    fi_new = log(1 + exp(-y[i] * innerProd));
     if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
-    while (gg > precision && fi_new > fi - gg/(2*(*Li))) {
+    while (gg > precision && fi_new > fi - gg/(2 * (*Li))) {
       If (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
       *Li *= 2;
       innerProd = wtx - xtx[i] * sig/(*Li);
@@ -174,13 +173,16 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     }
 
     /* Decrease value of Lipschitz constant */
-    *Li *= pow(2.0,-1.0/nSamples);
+    *Li *= pow(2.0, -1.0/nSamples);
     
   }
 
   if (sparse) {
     // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 208
   }
+
+  /* Freeing Allocated variables */
+  Free(xtx);
 
   /*=======\
   | Return |
