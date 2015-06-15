@@ -39,7 +39,7 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   double * w, * Xt, * y, lambda, * Li, alpha, innerProd, sig,
     c=1, *g, *d, nCovered=0, * cumsum, fi, fi_new, gg, precision, scaling, wtx;
 
-  double * xtx = Calloc(nSamples, double)
+  
   /*======\
   | Input |
   \======*/
@@ -48,22 +48,25 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   Xt = REAL(Xt_s);
   y = REAL(y_s);
   lambda = *REAL(lambda_s);
-  Li = *REAL(stepSize_s);
+  Li = REAL(stepSize_s);
   iVals = INTEGER(iVals_s);
   if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
   d = REAL(d_s);
   g = REAL(g_s);
   covered = INTEGER(covered_s);
   if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
-  // Mark deals with stepSizeType and xtx as optional arguments. This
-  // makes sense in MATLAB. In R it is simpler to pass the default
-  // argument in R when using .Call rather than use .Extern
-  stepSizeType = * INTEGER(stepSizeType_s);
   /* Compute sizes */
   nSamples = INTEGER(GET_DIM(Xt_s))[1];
   nVars = INTEGER(GET_DIM(Xt_s))[0];
   maxIter = INTEGER(GET_DIM(iVals_s))[0];
   precision = 1.490116119384765625e-8;
+
+  // Mark deals with stepSizeType and xtx as optional arguments. This
+  // makes sense in MATLAB. In R it is simpler to pass the default
+  // argument in R when using .Call rather than use .Extern
+  stepSizeType = * INTEGER(stepSizeType_s);
+ 
+  double * xtx = Calloc(nSamples, double);
 
   /*===============\
   | Error Checking |
@@ -149,7 +152,7 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     fi_new = log(1 + exp(-y[i] * innerProd));
     if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
     while (gg > precision && fi_new > fi - gg/(2 * (*Li))) {
-      If (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
+      if (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
       *Li *= 2;
       innerProd = wtx - xtx[i] * sig/(*Li);
       fi_new = log(1 + exp(-y[i] * innerProd));
@@ -167,9 +170,9 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
       // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 187
     } else {
       scaling = 1 - alpha * lambda;
-      dscal(&nVars, &scaling, w, &one);
+      F77_CALL(dscal)(&nVars, &scaling, w, &one);
       scaling = -alpha/nCovered;
-      daxpy(&nVars, &scaling, d, &one, w, &one);
+      F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
 
     /* Decrease value of Lipschitz constant */
@@ -212,6 +215,6 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   setAttrib(results, R_NamesSymbol, results_names);
   // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
   UNPROTECT(nprot);
-
+  return results;
 }
 
