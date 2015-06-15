@@ -4,7 +4,7 @@
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
 
-const int DEBUG = 0;
+const static int DEBUG = 0;
 
 /**
  *     Logistic regression stochastic average gradient trainer
@@ -22,9 +22,9 @@ const int DEBUG = 0;
  *     use 2/(L + n*myu)
  *     @return optimal weights (p, 1)
  */
-SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
-                  SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                  SEXP covered_s, SEXP stepSizeType_s) {
+SEXP SAG_logistic_ls(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
+		     SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
+		     SEXP covered_s, SEXP stepSizeType_s) {
   // Initializing protection counter
   int nprot = 0;
   /* Variables  */

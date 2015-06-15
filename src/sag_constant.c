@@ -4,7 +4,7 @@
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
 
-const int DEBUG = 0;
+const static int DEBUG = 0;
 
 /**
  * Logistic regression stochastic average gradient trainer
