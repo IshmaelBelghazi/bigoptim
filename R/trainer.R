@@ -54,8 +54,41 @@ sag_constant <- function(X, y, lambda=0,
 
 ## * Sag with Line-search
 ##' @export
-sag_ls <- function() {
-    error("not implemented yet")
+sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
+                   stepSize=NULL, iVals=NULL,
+                   d=NULL, g=NULL,
+                   covered=NULL, stepSizeType=1) {
+    if (length(grep("CMatrix", class(X))) > 0) {
+        stop("sparse matrices support not implemented yet.")
+    }
+    if (is.null(maxiter)) {
+        maxiter <- NROW(X) * 20
+    }
+    if (is.null(wInit)) {
+        wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+    }
+    if (is.null(stepSize)) {
+        Lmax <- 0.25 * max(rowSums(X^2)) + lambda
+        stepSize <- 1/Lmax
+    }
+    if (is.null(iVals)) {
+        iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
+        storage.mode(iVals) <- "integer"
+    }
+    if (is.null(d)) {
+        d <- matrix(0, nrow=NCOL(X), ncol=1)
+    }
+    if (is.null(g)) {
+        g <- matrix(0, nrow=NROW(X), ncol=1)
+    }
+    if (is.null(covered)) {
+        covered <- matrix(0, nrow=NROW(X), ncol=1)
+        storage.mode(covered) <- "integer"
+    }
+    ## Calling C function
+    .Call("SAG_logistic_ls", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
+          as.integer(stepSizeType))
+    
 }
 ##' @export
 ## * Sag with line-search and adaptive sampling
