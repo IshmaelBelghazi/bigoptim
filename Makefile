@@ -42,7 +42,6 @@ CC=$(call R_getconf, CC)
 CFLAGS=$(call R_getconf, CFLAGS)
 CPICFLAGS=$(call R_getconf, CPICFLAGS)
 C_SYS_INCLUDE_PATH?=/usr/local/include
-
 ##,-----------------------
 ##| Getting C linker flags
 ##`-----------------------
