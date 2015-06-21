@@ -144,4 +144,9 @@ clean:
 	@rm -f *.o
 veryclean: clean
 	@rm -f *$(SHLIB_EXT)
-.PHONY: all clean rebuild diagnostic
+## ** Compilation Database
+compdb/fast: 
+	@bear make build
+compdb: compdb/fast veryclean
+.PHONY: all clean veryclean rebuild diagnostic
+
