@@ -16,3 +16,5 @@ GPATH
 ^sag$
 ^README\.Rmd$
 ^README-.*\.png$
+^src/Makefile$
+^src/compile_commands.json$
