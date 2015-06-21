@@ -12,7 +12,7 @@ const static int DEBUG = 0;
  * @param w_s(p, 1) weights
  * @param Xt_s(p, n) real fature matrix
  * @param y_s(n, 1) {-1, 1} target matrix
- * @param lambda_s scalar regularization parameters
+ * @param lambda_s scalar regularization parameter
  * @param stepSize_s scalar constant step size
  * @param iVals_s(max_iter, 1) sequence of examples to choose
  * @param d_s(p, 1) initial approximation of average gradient
@@ -34,7 +34,7 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
 
   double * w, * Xt, * y, lambda, alpha, innerProd, sig,
     c=1, *g, *d, nCovered=0, * cumsum, scaling;
-
+  
   /*======\
   | Input |
   \======*/
@@ -80,13 +80,14 @@ SEXP SAG_logistic(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (sparse && alpha * lambda == 1) {
     error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
+  
+  /*==============================\
+  | Stochastic Average Gradient   |
+  \==============================*/
   /* Allocate Memory Needed for lazy update */
   if (sparse) {
   // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
   }
-  /*============================\
-  | Stochastic Average Gradient |
-  \============================*/
   for (int i = 0; i < nSamples; i++) {
     if (covered[i] != 0) nCovered++;
   }
