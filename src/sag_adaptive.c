@@ -62,9 +62,11 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   d = REAL(d_s);
   g = REAL(g_s);
   covered = INTEGER(covered_s);
-  increasing = *REAL(increasing_s);
+  increasing = *INTEGER(increasing_s);
+
   double * xtx = Calloc(nSamples, double);
-  /* Computes Size */
+
+  /* Compute Sizes */
   nSamples = INTEGER(GET_DIM(Xt_s))[1];
   nVars = INTEGER(GET_DIM(Xt_s))[0];
   maxIter = INTEGER(GET_DIM(randVals_s))[0];
