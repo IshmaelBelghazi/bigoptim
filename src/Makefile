@@ -71,7 +71,7 @@ BLAS_LIBS=$(call R_getconf, BLAS_LIBS)
 ## ?= Defines if not already defined in the environement.
 SOURCES?=sag_constant.c sag_adaptive.c sag_linesearch.c
 OBJECTS=$(SOURCES:.c=.o)
-TARGETS=$(SOURCES:.c=$(SHLIB_EXT))
+TARGETS?=$(SOURCES:.c=$(SHLIB_EXT))
 ## * Defining Makefile
 ## ** Build processes
 ## Defining Build
