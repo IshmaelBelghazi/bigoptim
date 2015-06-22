@@ -10,27 +10,27 @@ double log2(double x) {
 	return log(x)/log(2);
 }
 
-
 const static int DEBUG = 0;
 
 /**
- * Stochastic Average Gradient Descent with line-search and adaptive
- * lipschitz sampling
- * 
- * @param w_s (p, 1) real weights
- * @param Xt_s (p, n) real features Matrix
- * @param y_s (m, 1) {-1, 1} targets Matrix
- * @param lambda_s scalar regularization parameter
- * @param Lmax_s 
- * @param Li_S 
- * @param randVals 
- * @param d_s (p, 1) initial approximation of average gradient
- * @param g_s (n, 1) previousd derivatives of loss
- * @param covered_s 
- * @param increasing_s 
- * @param xtx_s squared norm of features
- * 
- * @return optimal weights (p, 1)
+ *   Stochastic Average Gradient Descent with line-search and adaptive
+ *   lipschitz sampling
+ *   
+ *   @param w_s (p, 1) real weights
+ *   @param Xt_s (p, n) real features Matrix
+ *   @param y_s (m, 1) {-1, 1} targets Matrix
+ *   @param lambda_s scalar regularization parameter
+ *   @param Lmax_s scalar initial approximation of global Lipschitz constants
+ *   @param Li_S (n, 1) initial approximation of inidividual lipschitz constants
+ *   @param randVals (maxiter, 2) - sequence of random values for the
+ *   algorithm to use
+ *   @param d_s (p, 1) initial approximation of average gradient
+ *   @param g_s (n, 1) previousd derivatives of loss
+ *  
+ *   @param covered_s  d(p,1) initial approximation of average gradient (should be sum of previous gradients)
+ *   @param increasing_s  scalar default is 1 to allow the Lipscthiz constants to increase, set to 0 to only allow them to decrease
+ *     
+ *   @return optimal weights (p, 1)
  */
 SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
                   SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
