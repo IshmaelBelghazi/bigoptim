@@ -32,9 +32,9 @@ const static int DEBUG = 0;
  * 
  * @return optimal weights (p, 1)
  */
-SEXP SAG_logistic_ls(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
-		     SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
-                     SEXP increasing_s) {
+SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
+                  SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
+                  SEXP increasing_s) {
   // initializing protection counter
   int nprot = 0;
   /* Variables */
