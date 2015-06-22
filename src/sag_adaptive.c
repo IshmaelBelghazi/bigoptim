@@ -39,8 +39,9 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   int nprot = 0;
   /* Variables */
   // TODO(Ishmael): This is messy. Clean it. 
-  int k, ind, nSamples, sparse, maxIter=0, *covered, *lastVisited, increasing=0,
-                                        temp, nextpow2, levelMax, nLevels, level;
+  int k,ind,nSamples,maxIter,sparse=0,*covered,*lastVisited,increasing=0,temp,
+                                    nextpow2,levelMax,nLevels,level;
+  
   int i, j, nVars, one=1;
     
   size_t * jc,* ir;
@@ -57,14 +58,13 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   Xt = REAL(Xt_s);
   y = REAL(y_s);
   lambda = *REAL(lambda_s);
+  Lmax = REAL(Lmax_s);
   Li = REAL(Li_s);
   randVals = REAL(randVals_s);
   d = REAL(d_s);
   g = REAL(g_s);
   covered = INTEGER(covered_s);
   increasing = *INTEGER(increasing_s);
-
-  double * xtx = Calloc(nSamples, double);
 
   /* Compute Sizes */
   nSamples = INTEGER(GET_DIM(Xt_s))[1];
@@ -73,6 +73,11 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
   if (DEBUG) Rprintf("nVars: %d\n", nVars);
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
+
+  precision = 1.490116119384765625e-8;
+  double * xtx = Calloc(nSamples, double);
+
+
   /* Error Checking */
     if (nVars != INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
@@ -100,6 +105,7 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   if (sparse) {
     // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 89
   }
+   
   /* Compute mean of covered variables */
   Lmean = 0;
   for(int i = 0;i < nSamples; i++) {
@@ -141,7 +147,7 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   levelMax = nextpow2;
   for (int level = 1; level < nLevels; level++) {
     levelMax = levelMax/2;
-    for(int i=0; i < levelMax; i++) {
+    for(int i = 0; i < levelMax; i++) {
       nDescendants[i + nextpow2 * level] = nDescendants[ 2 * i + nextpow2 * (level - 1)] +
                                            nDescendants[ 2 * i + 1 + nextpow2*(level - 1)];
       LiMatrix[i + nextpow2*level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
@@ -209,19 +215,19 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     /* Update direction */
     if (sparse) {
       // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
-    }
-    else {
+    } else {
       scaling = sig-g[i];
       F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
     }
-        
+    
     /* Store derivative of loss */
     g[i] = sig;
-  
+
     /* Line-search for Li */
     Li_old = Li[i];
     if(increasing && covered[i]) Li[i] /= 2;
     fi = log(1 + exp(-y[i] * innerProd));
+
     /* Compute f_new as the function value obtained by taking 
      * a step size of 1/Li in the gradient direction */
     wtx = innerProd;
@@ -260,6 +266,7 @@ SEXP SAG_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
       }
     } else if (Li[i] != Li_old) {
       Lmean = Lmean + (Li[i] - Li_old)/(double)nCovered;
+
       /* Update LiMatrix with the new estimate of the Lipscitz constant */
       ind = i;
       for(int level = 0; level < nLevels; level++) {
