@@ -21,7 +21,7 @@ const static int DEBUG = 0;
  *   @param y_s (m, 1) {-1, 1} targets Matrix
  *   @param lambda_s scalar regularization parameter
  *   @param Lmax_s scalar initial approximation of global Lipschitz constants
- *   @param Li_S (n, 1) initial approximation of inidividual lipschitz constants
+ *   @param Li_s (n, 1) initial approximation of inidividual lipschitz constants
  *   @param randVals (maxiter, 2) - sequence of random values for the
  *   algorithm to use
  *   @param d_s (p, 1) initial approximation of average gradient
