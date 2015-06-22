@@ -56,8 +56,9 @@ sag_constant <- function(X, y, lambda=0,
 ##' @export
 sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    stepSize=NULL, iVals=NULL,
-                   d=NULL, g=NULL,
-                   covered=NULL, stepSizeType=1) {
+                   d=NULL, g=NULL, covered=NULL,
+                   stepSizeType=1) {
+    
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
     }
@@ -92,6 +93,45 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
 }
 ##' @export
 ## * Sag with line-search and adaptive sampling
-sag_adaptive_ls <- function() {
-    error("not implemented yet")
+sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
+                            Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
+                            d=NULL, g=NULL, covered=NULL, increasing=TRUE) {
+
+    if (length(grep("CMatrix", class(X))) > 0) {
+        stop("sparse matrices support not implemented yet.")
+    }
+    if (is.null(Li)) {
+        ## Initial guess of overall Lipschitz Constant
+        Lmax <- 1
+    }
+    if (is.null(Li)) {
+        ## Initial guess of Lipschitz constant of each function
+        Li <- matrix(1, nrow=NROW(X), ncol=1)
+    }
+    if (is.null(maxiter)) {
+        maxiter <- NROW(X) * 20
+    }
+    if (is.null(randVals)) {
+        randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
+    }
+    
+    if (is.null(wInit)) {
+        wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+    }
+    if (is.null(d)) {
+        d <- matrix(0, nrow=NCOL(X), ncol=1)
+    }
+    if (is.null(g)) {
+        g <- matrix(0, nrow=NROW(X), ncol=1)
+    }
+    if (is.null(covered)) {
+        covered <- matrix(0, nrow=NROW(X), ncol=1)
+        storage.mode(covered) <- "integer"
+    }
+
+    .Call("SAG_adaptive", wInit, t(X), y, lambda, Lmax, Li,
+          randVals, d, g, covered, increasing)
 }
+
+## Error Checking
+
