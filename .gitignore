@@ -25,3 +25,4 @@ GRTAGS
 GPATH
 # Misc
 .DS_Store
+^src/compile_commands.json$

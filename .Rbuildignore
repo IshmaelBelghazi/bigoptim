@@ -15,3 +15,4 @@ GPATH
 ^README\.Rmd$
 ^README-.*\.png$
 ^src/compile_commands.json$^MakeR$
+^src/compile_commands.json$
