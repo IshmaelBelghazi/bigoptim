@@ -12,9 +12,6 @@ TAGS
 GTAGS
 GRTAGS
 GPATH
-^data-raw$
-^sag$
 ^README\.Rmd$
 ^README-.*\.png$
-^src/Makefile$
-^src/compile_commands.json$
+^src/compile_commands.json$^MakeR$
