@@ -1,5 +1,5 @@
 context("glmnet consistency tests")
-library(glmnet)
+suppressMessages(library(glmnet))
 ## test parameters
 eps <- 1e-03
 ## Simulating logistic datasets
