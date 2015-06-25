@@ -5,7 +5,8 @@
 #include <R_ext/BLAS.h>
 
 const static int DEBUG = 0;
-
+const static int one = 1;
+const static int sparse = 0;
 /**
  *     Logistic regression stochastic average gradient trainer
  *    
@@ -28,44 +29,37 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   // Initializing protection counter
   int nprot = 0;
   /* Variables  */
-  int k, nSamples, maxIter, sparse = 0, * iVals, * covered, * lastVisited;
-  int temp, stepSizeType;
-  
-  long i, j;
-  int nVars, one = 1; // With long clang complains about pointer type incompability
- 
-  size_t * jc, * ir;
-  
-  double * w, * Xt, * y, lambda, * Li, alpha, innerProd, sig,
-    c=1, *g, *d, nCovered=0, * cumsum, fi, fi_new, gg, precision, scaling, wtx;
-
+  // int * lastVisited;
+  // int temp;
+  // int * jc, * ir;  
+  double alpha,  nCovered=0;
+  // double c = 1;
+  // double * cumsum;
   
   /*======\
   | Input |
   \======*/
-
-  w = REAL(w_s);
-  Xt = REAL(Xt_s);
-  y = REAL(y_s);
-  lambda = *REAL(lambda_s);
-  Li = REAL(stepSize_s);
-  iVals = INTEGER(iVals_s);
+  double * w = REAL(w_s);
+  double * Xt = REAL(Xt_s);
+  double * y = REAL(y_s);
+  double lambda = *REAL(lambda_s);
+  double * Li = REAL(stepSize_s);
+  int * iVals = INTEGER(iVals_s);
   if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
-  d = REAL(d_s);
-  g = REAL(g_s);
-  covered = INTEGER(covered_s);
+  double * d = REAL(d_s);
+  double * g = REAL(g_s);
+  int * covered = INTEGER(covered_s);
   if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
   /* Compute sizes */
-  nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  nVars = INTEGER(GET_DIM(Xt_s))[0];
-  maxIter = INTEGER(GET_DIM(iVals_s))[0];
-  precision = 1.490116119384765625e-8;
+  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
+  int nVars = INTEGER(GET_DIM(Xt_s))[0];
+  int maxIter = INTEGER(GET_DIM(iVals_s))[0];
+  double precision = 1.490116119384765625e-8;
 
   // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
-  stepSizeType = * INTEGER(stepSizeType_s);
- 
+  int stepSizeType = *INTEGER(stepSizeType_s); 
   double * xtx = Calloc(nSamples, double);
 
   /*===============\
@@ -116,19 +110,22 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   \============================*/
   for (int k = 0; k < maxIter; k++) {
     /* Select next training example */
-    i = iVals[k] - 1;
+    int i = iVals[k] - 1;
     if (sparse && k > 0) {
       //TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 119
     }
     /* Compute derivative of loss */
+    double innerProd;
     if (sparse) {
       // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 132
     } else {
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
 
-    sig = -y[i]/(1+exp(y[i]*innerProd));
+    double sig = -y[i]/(1 + exp(y[i] * innerProd));
+    
     /* Update Direction */
+    double scaling;
     if (sparse) {
       // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 144
     } else {
@@ -138,18 +135,19 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     /* Store Derivatives of loss */
     g[i] = sig;
     /* Update the number of examples that we have seen */
-    if (covered[i]==0) {
-      covered[i]=1; nCovered++;
+    if (covered[i] == 0) {
+      covered[i] = 1; nCovered++;
     }
 
     /* Line-search for Li */
-    fi = log(1 + exp(-y[i] * innerProd));
+    double fi = log(1 + exp(-y[i] * innerProd));
     /* Compute f_new as the function value obtained by taking 
      * a step size of 1/Li in the gradient direction */
-    wtx = innerProd;
-    gg = sig * sig * xtx[i];
+    double wtx = innerProd;
+    double gg = sig * sig * xtx[i];
     innerProd = wtx - xtx[i] * sig/(*Li);
-    fi_new = log(1 + exp(-y[i] * innerProd));
+
+    double fi_new = log(1 + exp(-y[i] * innerProd));
     if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
     while (gg > precision && fi_new > fi - gg/(2 * (*Li))) {
       if (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
@@ -176,8 +174,7 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     }
 
     /* Decrease value of Lipschitz constant */
-    *Li *= pow(2.0, -1.0/nSamples);
-    
+    *Li *= pow(2.0, -1.0/nSamples); 
   }
 
   if (sparse) {
