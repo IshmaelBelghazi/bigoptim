@@ -22,9 +22,9 @@ const static int DEBUG = 0;
  *     use 2/(L + n*myu)
  *     @return optimal weights (p, 1)
  */
-SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
-                      SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                      SEXP covered_s, SEXP stepSizeType_s) {
+SEXP C_sag_linesearch_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
+                           SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
+                           SEXP covered_s, SEXP stepSizeType_s) {
   // Initializing protection counter
   int nprot = 0;
   /* Variables  */

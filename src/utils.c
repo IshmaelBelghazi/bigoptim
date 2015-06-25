@@ -26,3 +26,15 @@ double _log_sum_exp(const double * restrict array, const int ar_size) {
   }
   return array_max + log(sum);
 }
+
+// TODO(Ishmael): Consider using R math functions
+/** 
+ * Log base 2
+ *
+ * @param x real
+ *
+ * @return 
+ */
+double log2(double x) {
+  return log(x)/log(2);
+}

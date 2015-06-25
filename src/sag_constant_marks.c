@@ -5,8 +5,7 @@
 #include <R_ext/BLAS.h>
 
 const static int DEBUG = 0;
-const static int one = 1;
-const static int sparse = 0;
+
 /**
  * Logistic regression stochastic average gradient trainer
  *
@@ -21,33 +20,40 @@ const static int sparse = 0;
  * @param covered_s(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
-SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
-                    SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                    SEXP covered_s) {
-  // Initializing garbage collection protection counter
+SEXP C_sag_constant_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
+                         SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
+                         SEXP covered_s) {
+  // Initializing protection counter
   int nprot = 0;
   /* Variables  */
-  // int * lastVisited;
-  // int * jc, * ir;
-  // double c=1, * cumsum;
+  int k, nSamples, maxIter, sparse = 0, * iVals, * covered, * lastVisited;
+  long i, j;
+  int nVars, one = 1; // With long clang complains about pointer type incompability
+
+  size_t * jc, * ir;
+
+  double * w, * Xt, * y, lambda, alpha, innerProd, sig,
+    c=1, *g, *d, nCovered=0, * cumsum, scaling;
+  
   /*======\
   | Input |
   \======*/
-  double * w = REAL(w_s);
-  double * Xt = REAL(Xt_s);
-  double * y = REAL(y_s);
-  double lambda = *REAL(lambda_s);
-  double alpha = *REAL(stepSize_s);
-  int * iVals = INTEGER(iVals_s);
+
+  w = REAL(w_s);
+  Xt = REAL(Xt_s);
+  y = REAL(y_s);
+  lambda = *REAL(lambda_s);
+  alpha = *REAL(stepSize_s);
+  iVals = INTEGER(iVals_s);
   if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
-  double * d = REAL(d_s);
-  double * g = REAL(g_s);
-  int * covered = INTEGER(covered_s);
+  d = REAL(d_s);
+  g = REAL(g_s);
+  covered = INTEGER(covered_s);
   if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
   /* Compute sizes */
-  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  int nVars = INTEGER(GET_DIM(Xt_s))[0];
-  int maxIter = INTEGER(GET_DIM(iVals_s))[0];
+  nSamples = INTEGER(GET_DIM(Xt_s))[1];
+  nVars = INTEGER(GET_DIM(Xt_s))[0];
+  maxIter = INTEGER(GET_DIM(iVals_s))[0];
   if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
   if (DEBUG) Rprintf("nVars: %d\n", nVars);
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
@@ -55,7 +61,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   /*===============\
   | Error Checking |
   \===============*/
-  if (nVars != (int)INTEGER(GET_DIM(w_s))[0]) {
+  if (nVars != INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
   }
   if (nSamples != INTEGER(GET_DIM(y_s))[0]) {
@@ -72,7 +78,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   }
   // TODO(Ishmael): SAG_logistic_BLAS line 62
   if (sparse && alpha * lambda == 1) {
-    error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
+    error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
   
   /*==============================\
@@ -82,31 +88,29 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (sparse) {
   // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
   }
-  double nCovered = 0;
   for (int i = 0; i < nSamples; i++) {
     if (covered[i] != 0) nCovered++;
   }
 
   for (int k = 0; k < maxIter; k++) {
     /* Select next training example */
-    int i = iVals[k] - 1;
+    i = iVals[k] - 1;
     /* Compute current values of needed parameters */
     if (sparse && k > 0) {
       //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
     }
-    
+
+
     /* Compute derivative of loss */
-    double innerProd = 0;
     if (sparse) {
       //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
     } else {
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
     }
 
-    double sig = -y[i]/(1 + exp(y[i] * innerProd));
+    sig = -y[i]/(1 + exp(y[i] * innerProd));
 
     /* Update direction */
-    double scaling;
     if (sparse) {
       // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
     } else {
@@ -163,6 +167,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   }
   setAttrib(results, R_NamesSymbol, results_names);
 
+  // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
   UNPROTECT(nprot);
   return results;
 }

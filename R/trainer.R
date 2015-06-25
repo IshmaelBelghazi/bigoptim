@@ -1,5 +1,5 @@
 ## * SAG with constant Step Size
-## logisitic regression with SAG with constant step size
+## logistic regression with SAG. constant step size
 ##' let n be the number of example. p the number of features
 ##' @title SAG with constant step size for logistic regression
 ##' @param w vector of weights m X 1
@@ -16,7 +16,7 @@
 ##' @return list of results
 ##' @author Mohamed Ishmael Diwan Belghazi
 ##' @export
-##' @useDynLib bigoptim SAG_logistic
+##' @useDynLib bigoptim C_sag_constant
 sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
@@ -49,11 +49,12 @@ sag_constant <- function(X, y, lambda=0,
         storage.mode(covered) <- "integer"
     }
     ## Calling C function
-        .Call("SAG_logistic", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered)
+        .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered)
 }
 
 ## * Sag with Line-search
 ##' @export
+##' @useDynLib  bigoptim C_sag_linesearch
 sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    stepSize=NULL, iVals=NULL,
                    d=NULL, g=NULL, covered=NULL,
@@ -87,12 +88,13 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
         storage.mode(covered) <- "integer"
     }
     ## Calling C function
-    .Call("SAG_logistic_ls", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
+    .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
           as.integer(stepSizeType))
     
 }
-##' @export
 ## * Sag with line-search and adaptive sampling
+##' @export
+##' @useDynLib  bigoptim C_sag_adaptive
 sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
                             Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
                             d=NULL, g=NULL, covered=NULL, increasing=TRUE) {
@@ -129,7 +131,7 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
         storage.mode(covered) <- "integer"
     }
 
-    .Call("SAG_adaptive", wInit, t(X), y, lambda, Lmax, Li,
+    .Call("C_sag_adaptive", wInit, t(X), y, lambda, Lmax, Li,
           randVals, d, g, covered, increasing)
 }
 

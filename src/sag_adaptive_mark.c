@@ -6,7 +6,7 @@
 #include <R_ext/BLAS.h>
 #include "utils.h"
 
-// TODO(Ishmael): Consider using R math functions
+
 const static int DEBUG = 0;
 
 /**
@@ -29,9 +29,9 @@ const static int DEBUG = 0;
  *     
  *   @return optimal weights (p, 1)
  */
-SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
-                    SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
-                    SEXP increasing_s) {
+SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
+                         SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
+                         SEXP increasing_s) {
   // initializing protection counter
   int nprot = 0;
   /* Variables */

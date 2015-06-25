@@ -8,10 +8,8 @@
 .Rapp.history
 # Example code in package build process
 *-Ex.R
-
 # RStudio files
 .Rproj.user/
-
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
@@ -23,6 +21,9 @@ TAGS
 GTAGS
 GRTAGS
 GPATH
+GSYMS
+r_include
 # Misc
 .DS_Store
-^src/compile_commands.json$
+src/compile_commands.json
+
