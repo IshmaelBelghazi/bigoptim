@@ -8,7 +8,8 @@
 
 // TODO(Ishmael): Consider using R math functions
 const static int DEBUG = 0;
-
+const static int one = 1;
+const static int sparse = 0;
 /**
  *   Stochastic Average Gradient Descent with line-search and adaptive
  *   lipschitz sampling
@@ -36,47 +37,45 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   int nprot = 0;
   /* Variables */
   // TODO(Ishmael): This is messy. Clean it. 
-  int k,ind,nSamples,maxIter,sparse=0,*covered,*lastVisited,increasing=0,temp,
-                                    nextpow2,levelMax,nLevels,level;
+  // int temp;
+  // int  * lastVisited;
+  // int i, j;
+  // size_t * jc,* ir;
+    
+  double alpha;
+  // double c=1;
+  // double * cumSum;
   
-  int i, j, nVars, one=1;
-    
-  size_t * jc,* ir;
-    
-  double *w, *Xt, *y, lambda, *Li, alpha, innerProd, sig,c=1, *g, *d, nCovered=0, *cumSum, fi,
-  fi_new,gg,precision, *randVals, *Lmax, Lmean, Li_old, *nDescendants, *unCoveredMatrix,
-  *LiMatrix, offset, u, z, Z, wtx, scaling;
-    
   /*======\
   | Input |
   \======*/
   
-  w = REAL(w_s);
-  Xt = REAL(Xt_s);
-  y = REAL(y_s);
-  lambda = *REAL(lambda_s);
-  Lmax = REAL(Lmax_s);
-  Li = REAL(Li_s);
-  randVals = REAL(randVals_s);
-  d = REAL(d_s);
-  g = REAL(g_s);
-  covered = INTEGER(covered_s);
-  increasing = *INTEGER(increasing_s);
+  double * w = REAL(w_s);
+  double * Xt = REAL(Xt_s);
+  double * y = REAL(y_s);
+  double lambda = *REAL(lambda_s);
+  double * Lmax = REAL(Lmax_s);
+  double * Li = REAL(Li_s);
+  double * randVals = REAL(randVals_s);
+  double * d = REAL(d_s);
+  double * g = REAL(g_s);
+  int * covered = INTEGER(covered_s);
+  int increasing = *INTEGER(increasing_s);
 
   /* Compute Sizes */
-  nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  nVars = INTEGER(GET_DIM(Xt_s))[0];
-  maxIter = INTEGER(GET_DIM(randVals_s))[0];
+  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
+  int nVars = INTEGER(GET_DIM(Xt_s))[0];
+  int maxIter = INTEGER(GET_DIM(randVals_s))[0];
   if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
   if (DEBUG) Rprintf("nVars: %d\n", nVars);
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
 
-  precision = 1.490116119384765625e-8;
+  double precision = 1.490116119384765625e-8;
   double * xtx = Calloc(nSamples, double);
 
 
   /* Error Checking */
-    if (nVars != INTEGER(GET_DIM(w_s))[0]) {
+  if (nVars != INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
   }
   if (nSamples != INTEGER(GET_DIM(y_s))[0]) {
@@ -104,16 +103,19 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   }
    
   /* Compute mean of covered variables */
-  Lmean = 0;
+  double Lmean = 0;
+  double nCovered = 0;
   for(int i = 0;i < nSamples; i++) {
     if (covered[i] != 0) {
       nCovered++;
       Lmean += Li[i];
     }
   }
+  
   if(nCovered > 0) {
     Lmean /= nCovered;
   }
+  
   for (int i = 0; i < nSamples; i++) {
     if (sparse) {
       // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103
@@ -124,55 +126,57 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   }
   /* Do the O(n log n) initialization of the data structures
      will allow sampling in O(log(n)) time */
-  nextpow2 = pow(2, ceil(log2(nSamples)/log2(2)));
-  nLevels = 1 + (int)ceil(log2(nSamples));
+  int nextpow2 = pow(2, ceil(log2(nSamples)/log2(2)));
+  int nLevels = 1 + (int)ceil(log2(nSamples));
   if (DEBUG) Rprintf("next power of 2 is: %d\n",nextpow2);
   if (DEBUG) Rprintf("nLevels = %d\n",nLevels);
   /* Counts number of descendents in tree */
-  nDescendants = Calloc(nextpow2 * nLevels,double); 
+  double * nDescendants = Calloc(nextpow2 * nLevels,double); 
   /* Counts number of descenents that are still uncovered */
-  unCoveredMatrix = Calloc(nextpow2 * nLevels, double); 
+  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double); 
   /* Sums Lipschitz constant of loss over descendants */
-  LiMatrix = Calloc(nextpow2 * nLevels, double); 
+  double * LiMatrix = Calloc(nextpow2 * nLevels, double); 
   for(int i = 0; i < nSamples; i++) {
     nDescendants[i] = 1;
-    if (covered[i]) 
-      LiMatrix[i] = Li[i];
-    else
+    if (covered[i]) {
+        LiMatrix[i] = Li[i];
+    } else {
       unCoveredMatrix[i] = 1;
     }
-  levelMax = nextpow2;
+    
+  }
+  int levelMax = nextpow2;
   for (int level = 1; level < nLevels; level++) {
     levelMax = levelMax/2;
     for(int i = 0; i < levelMax; i++) {
       nDescendants[i + nextpow2 * level] = nDescendants[ 2 * i + nextpow2 * (level - 1)] +
-                                           nDescendants[ 2 * i + 1 + nextpow2*(level - 1)];
-      LiMatrix[i + nextpow2*level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
-                                     LiMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
+                                           nDescendants[ 2 * i + 1 + nextpow2 * (level - 1)];
+      LiMatrix[i + nextpow2 * level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
+                                       LiMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
       unCoveredMatrix[i + nextpow2 * level] = unCoveredMatrix[2 * i + nextpow2 * (level - 1)] +
-                                              unCoveredMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
-        }
+                                              unCoveredMatrix[2 * i + 1 + nextpow2 * (level - 1)];
     }
+  }
 
   for(int k = 0; k < maxIter; k++) {
     /* Select next training example */
-    offset = 0;
-    i = 0;
-    u = randVals[k+maxIter];
+    double offset = 0;
+    int i = 0;
+    double u = randVals[k + maxIter];
+    double z, Z;
     if(randVals[k] < (double)(nSamples - nCovered)/(double)nSamples) {
       /* Sample fron uncovered guys */
       Z = unCoveredMatrix[nextpow2 * (nLevels - 1)];
       for(int level=nLevels - 1;level >= 0; level--) {
         z = offset + unCoveredMatrix[2 * i + nextpow2 * level];
-        if(u < z/Z)
+        if(u < z/Z) {
           i = 2 * i;
-        else {
+        } else {
           offset = z;
           i = 2 * i + 1;
         }
       }
-    }
-    else {
+    } else {
       /* Sample from covered guys according to estimate of Lipschitz constant */
       Z = LiMatrix[nextpow2 * (nLevels - 1)] +
           (Lmean + 2 * lambda) *
@@ -184,7 +188,7 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
             (nDescendants[2 * i + nextpow2 * level] -
              unCoveredMatrix[2 * i + nextpow2 * level]);
         if(u < z/Z) {
-          i = 2*i;
+          i = 2 * i;
         } else {
           offset = z;
           i = 2 * i + 1;
@@ -200,16 +204,17 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     }
 
     /* Compute derivative of loss */
-    innerProd = 0;
+    double innerProd = 0;
     if (sparse) {
       // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 206
-    }
-    else {
+    } else {
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
-    sig = -y[i]/(1 + exp(y[i] * innerProd));
+    
+    double sig = -y[i]/(1 + exp(y[i] * innerProd));
         
     /* Update direction */
+    double scaling;
     if (sparse) {
       // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
     } else {
@@ -221,16 +226,16 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     g[i] = sig;
 
     /* Line-search for Li */
-    Li_old = Li[i];
+    double Li_old = Li[i];
     if(increasing && covered[i]) Li[i] /= 2;
-    fi = log(1 + exp(-y[i] * innerProd));
+    double fi = log(1 + exp(-y[i] * innerProd));
 
     /* Compute f_new as the function value obtained by taking 
      * a step size of 1/Li in the gradient direction */
-    wtx = innerProd;
-    gg = sig * sig * xtx[i];
+    double wtx = innerProd;
+    double gg = sig * sig * xtx[i];
     innerProd = wtx - xtx[i] * sig/Li[i];
-    fi_new = log(1 + exp(-y[i] * innerProd));
+    double fi_new = log(1 + exp(-y[i] * innerProd));
     if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
     while (gg > precision && fi_new > fi - gg/(2*(Li[i]))) {
       if (DEBUG) {  Rprintf("Lipschitz Backtracking (k = %d, fi = %e, * fi_new = %e, 1/Li = %e)\n", k +1 ,
@@ -243,10 +248,11 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     if(Li[i] > *Lmax) *Lmax = Li[i];
 
     /* Update the number of examples that we have seen */
-    if (covered[i]==0) {
-      covered[i]=1;
+    int ind;
+    if (covered[i] == 0) {
+      covered[i] = 1;
       nCovered++;
-      Lmean = Lmean *((double)(nCovered-1)/(double)nCovered) +
+      Lmean = Lmean *((double)(nCovered - 1)/(double)nCovered) +
               Li[i]/(double)nCovered;
             
       /* Update unCoveredMatrix so we don't sample this guy when looking for a new guy */
@@ -277,7 +283,7 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
           Rprintf("%f ", LiMatrix[ind + nextpow2 * j]);
         }
         Rprintf("\n");
-      }   
+      }
     }
      /* Compute step size */
     alpha = ((double)(nSamples - nCovered)/(double)nSamples)/(*Lmax + lambda) +
