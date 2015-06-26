@@ -3,6 +3,7 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "glm_models.h"
 
 const static int DEBUG = 0;
 const static int one = 1;
@@ -21,6 +22,7 @@ const static int sparse = 0;
  * @param covered_s(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
+
 SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
                     SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
                     SEXP covered_s) {
@@ -103,7 +105,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
     }
 
-    double sig = -y[i]/(1 + exp(y[i] * innerProd));
+    double sig = logistic_grad(y[i], innerProd);
 
     /* Update direction */
     double scaling;
