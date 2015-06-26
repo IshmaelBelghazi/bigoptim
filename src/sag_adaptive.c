@@ -42,7 +42,7 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   // int i, j;
   // size_t * jc,* ir;
     
-  double alpha;
+
   // double c=1;
   // double * cumSum;
   
@@ -91,9 +91,9 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     error("covered and y must hvae the same number of rows");
   }
   // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 78
-  if (sparse && alpha * lambda == 1) {
-    error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
-  }
+  /* if (sparse && alpha * lambda == 1) { */
+  /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
+  /* } */
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
@@ -286,9 +286,9 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
       }
     }
      /* Compute step size */
-    alpha = ((double)(nSamples - nCovered)/(double)nSamples)/(*Lmax + lambda) +
-            ((double)nCovered/(double)nSamples) * (1/(2*(*Lmax + lambda)) +
-                                                   1/(2*(Lmean + lambda)));
+    double alpha = ((double)(nSamples - nCovered)/(double)nSamples)/(*Lmax + lambda) +
+                   ((double)nCovered/(double)nSamples) * (1/(2*(*Lmax + lambda)) +
+                                                          1/(2*(Lmean + lambda)));
     /* Update parameters */
     if (sparse) {
       // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 294
