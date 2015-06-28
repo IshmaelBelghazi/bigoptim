@@ -3,6 +3,7 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "glm_models.h"
 
 const static int DEBUG = 0;
 const static int one = 1;
@@ -122,7 +123,7 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
 
-    double sig = -y[i]/(1 + exp(y[i] * innerProd));
+    double sig = logistic_grad(y[i], innerProd);
     
     /* Update Direction */
     double scaling;
@@ -140,14 +141,14 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     }
 
     /* Line-search for Li */
-    double fi = log(1 + exp(-y[i] * innerProd));
+    double fi = logistic_loss(y[i], innerProd);
     /* Compute f_new as the function value obtained by taking 
      * a step size of 1/Li in the gradient direction */
     double wtx = innerProd;
     double gg = sig * sig * xtx[i];
     innerProd = wtx - xtx[i] * sig/(*Li);
 
-    double fi_new = log(1 + exp(-y[i] * innerProd));
+    double fi_new = logistic_loss(y[i], innerProd);
     if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
     while (gg > precision && fi_new > fi - gg/(2 * (*Li))) {
       if (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
@@ -155,7 +156,7 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
       innerProd = wtx - xtx[i] * sig/(*Li);
       fi_new = log(1 + exp(-y[i] * innerProd));
     }
-
+    
     /* Compute step size */
     if (stepSizeType == 1) {
       alpha = 1/(*Li + lambda);
