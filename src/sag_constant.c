@@ -143,7 +143,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
 double _sag_constant_iteration(double * w, double * Xt, double * y,
                                double lambda, double alpha, int * iVals,
                                double * d, double * g, int * covered,
-                               int nCovered, int nSamples, 
+                               double nCovered, int nSamples, 
                                int nVars, int maxIter, int k) {
   // TODO(Ishmael): Rename k
   
