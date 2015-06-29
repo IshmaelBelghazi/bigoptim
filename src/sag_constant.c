@@ -3,7 +3,10 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "dataset.h"
+#include "trainers.h"
 #include "glm_models.h"
+
 
 /* Constant */
 const static int DEBUG = 0;
@@ -49,51 +52,69 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   /*======\
   | Input |
   \======*/
-  double * w = REAL(w_s);
-  double * Xt = REAL(Xt_s);
-  double * y = REAL(y_s);
-  double lambda = *REAL(lambda_s);
-  double alpha = *REAL(stepSize_s);
-  int * iVals = INTEGER(iVals_s);
-  if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
-  double * d = REAL(d_s);
-  double * g = REAL(g_s);
-  int * covered = INTEGER(covered_s);
-  if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
-  /* Compute sizes */
-  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  int nVars = INTEGER(GET_DIM(Xt_s))[0];
-  int maxIter = INTEGER(GET_DIM(iVals_s))[0];
-  if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
-  if (DEBUG) Rprintf("nVars: %d\n", nVars);
-  if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
+
+  /* Initializing dataset */
+  Dataset train_set = {.Xt = REAL(Xt_s),
+                       .y = REAL(y_s),
+                       .covered = INTEGER(covered_s),
+                       .nCovered = 0,
+                       .nSamples = INTEGER(GET_DIM(Xt_s))[1],
+                       .nVars = INTEGER(GET_DIM(Xt_s))[0]};
+
+  /* Initializing Trainer */
+  SAGConstant trainer = {.w = REAL(w_s),
+                         .lambda = *REAL(lambda_s),
+                         .alpha = *REAL(stepSize_s),
+                         .d = REAL(d_s),
+                         .g = REAL(g_s),
+                         .maxIter = INTEGER(GET_DIM(iVals_s))[0],
+                         .iVals = INTEGER(iVals_s)};
+    /* Initializing Model */
   
-  /*======\
-  | Model |
-  \======*/
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.loss=logistic_loss, .grad=logistic_grad};
+  
+  // double * w = REAL(w_s);
+  // double * Xt = REAL(Xt_s);
+  // double * y = REAL(y_s);
+  // double lambda = *REAL(lambda_s);
+  // double alpha = *REAL(stepSize_s);
+  // int * iVals = INTEGER(iVals_s);
+  // if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
+  // double * d = REAL(d_s);
+  // double * g = REAL(g_s);
+  // int * covered = INTEGER(covered_s);
+  // if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
+  /* Compute sizes */
+  // int nSamples = INTEGER(GET_DIM(Xt_s))[1];
+  // int nVars = INTEGER(GET_DIM(Xt_s))[0];
+  // int maxIter = INTEGER(GET_DIM(iVals_s))[0];
+  //if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
+  //if (DEBUG) Rprintf("nVars: %d\n", nVars);
+  // if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
+  
+
   
   /*===============\
   | Error Checking |
   \===============*/
-  if (nVars != (int)INTEGER(GET_DIM(w_s))[0]) {
+  if (train_set.nVars != (int)INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(y_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(y_s))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (nVars != INTEGER(GET_DIM(d_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(d_s))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(g_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(g_s))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(covered_s))[0]) {
-    error("covered and y must hvae the same number of rows");
+  if (train_set.nSamples != INTEGER(GET_DIM(covered_s))[0]) {
+    error("covered and y must have the same number of rows");
   }
   // TODO(Ishmael): SAG_logistic_BLAS line 62
-  if (sparse && alpha * lambda == 1) {
+  if (train_set.sparse && trainer.alpha * trainer.lambda == 1) {
     error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
   
@@ -104,17 +125,29 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (sparse) {
   // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
   }
-  double nCovered = 0;
-  for (int i = 0; i < nSamples; i++) {
-    if (covered[i] != 0) nCovered++;
+  /* Counting*/
+  for (int i = 0; i < train_set.nSamples; i++) {
+    if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-  
-  for (int k = 0; k < maxIter; k++) {
+  double nCovered = train_set.nCovered;
+  for (int k = 0; k < trainer.maxIter; k++) {
     // Runing Iteration
-    _sag_constant_iteration(&model, w, Xt, y, lambda, alpha,
-                            iVals, d, g, covered, &nCovered,
-                            nSamples, nVars, maxIter, k);
-    
+
+    _sag_constant_iteration(&model,
+                            trainer.w,
+                            train_set.Xt,
+                            train_set.y,
+                            trainer.lambda,
+                            trainer.alpha,
+                            trainer.iVals,
+                            trainer.d,
+                            trainer.g,
+                            train_set.covered,
+                            &nCovered,
+                            train_set.nSamples,
+                            train_set.nVars,
+                            trainer.maxIter,
+                            k);
   }
   if (sparse) {
     // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
@@ -124,14 +157,14 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   | Return |
   \=======*/
   /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), w, nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), d, nVars);
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), g, nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), covered, nSamples);
+  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(w_return), trainer.w, train_set.nVars);
+  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
+  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
+  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
 
   /* Assigning variables to list */
   SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
