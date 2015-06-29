@@ -72,7 +72,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   | Model |
   \======*/
   // TODO(Ishmael): Model Dispatch should go here
-  GlmModel model = {logistic_loss, logistic_grad};
+  GlmModel model = {.loss=logistic_loss, .grad=logistic_grad};
   
   /*===============\
   | Error Checking |
@@ -114,6 +114,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     _sag_constant_iteration(&model, w, Xt, y, lambda, alpha,
                             iVals, d, g, covered, &nCovered,
                             nSamples, nVars, maxIter, k);
+    
   }
   if (sparse) {
     // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
