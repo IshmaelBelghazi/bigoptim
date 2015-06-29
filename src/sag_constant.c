@@ -5,9 +5,18 @@
 #include <R_ext/BLAS.h>
 #include "glm_models.h"
 
+/* Constant */
 const static int DEBUG = 0;
 const static int one = 1;
 const static int sparse = 0;
+
+/* Prototypes */
+double _sag_constant_iteration(double * w, double * Xt, double * y,
+                                 double lambda, double alpha, int * iVals,
+                                 double * d, double * g, int * covered,
+                                 int nCovered, int nSamples, 
+                                 int nVars, int maxIter, int k);
+
 /**
  * Logistic regression stochastic average gradient trainer
  *
@@ -22,7 +31,6 @@ const static int sparse = 0;
  * @param covered_s(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
-
 SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
                     SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
                     SEXP covered_s) {
@@ -88,51 +96,13 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   for (int i = 0; i < nSamples; i++) {
     if (covered[i] != 0) nCovered++;
   }
-
+  
   for (int k = 0; k < maxIter; k++) {
-    /* Select next training example */
-    int i = iVals[k] - 1;
-    /* Compute current values of needed parameters */
-    if (sparse && k > 0) {
-      //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
-    }
-    
-    /* Compute derivative of loss */
-    double innerProd = 0;
-    if (sparse) {
-      //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
-    } else {
-      innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
-    }
+    // Runing Iteration
+    nCovered = _sag_constant_iteration(w, Xt, y, lambda, alpha,
+                                       iVals, d, g, covered, nCovered,
+                                       nSamples, nVars, maxIter, k);
 
-    double sig = logistic_grad(y[i], innerProd);
-
-    /* Update direction */
-    double scaling;
-    if (sparse) {
-      // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
-    } else {
-      scaling = sig - g[i];
-      F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
-    }
-
-    /* Store derivative of loss */
-    g[i] = sig;
-    /* Update the number of examples that we have seen */
-    if (covered[i] == 0) {
-      covered[i] = 1;
-      nCovered++;
-    }
-
-  /* Update parameters */
-    if (sparse) {
-      // TODO(Ishmael): Line 135 in SAG_logistic_BLAS
-    } else {
-      scaling = 1 - alpha * lambda;
-      F77_CALL(dscal)(&nVars, &scaling, w, &one);
-      scaling = -alpha/nCovered;
-      F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
-    }
   }
   if (sparse) {
     // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
@@ -167,4 +137,59 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
 
   UNPROTECT(nprot);
   return results;
+}
+
+
+double _sag_constant_iteration(double * w, double * Xt, double * y,
+                               double lambda, double alpha, int * iVals,
+                               double * d, double * g, int * covered,
+                               int nCovered, int nSamples, 
+                               int nVars, int maxIter, int k) {
+  // TODO(Ishmael): Rename k
+  
+  /* Select next training example */
+  int i = iVals[k] - 1;
+  /* Compute current values of needed parameters */
+  if (sparse && k > 0) {
+    //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
+  }
+    
+  /* Compute derivative of loss */
+  double innerProd = 0;
+  if (sparse) {
+    //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
+  } else {
+    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
+  }
+
+  double sig = logistic_grad(y[i], innerProd);
+
+  /* Update direction */
+  double scaling;
+  if (sparse) {
+    // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
+  } else {
+    scaling = sig - g[i];
+    F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
+  }
+
+  /* Store derivative of loss */
+  g[i] = sig;
+  /* Update the number of examples that we have seen */
+  if (covered[i] == 0) {
+    covered[i] = 1;
+    nCovered++;
+  }
+
+  /* Update parameters */
+  if (sparse) {
+    // TODO(Ishmael): Line 135 in SAG_logistic_BLAS
+  } else {
+    scaling = 1 - alpha * lambda;
+    F77_CALL(dscal)(&nVars, &scaling, w, &one);
+    scaling = -alpha/nCovered;
+    F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
+  }
+
+  return nCovered;
 }
