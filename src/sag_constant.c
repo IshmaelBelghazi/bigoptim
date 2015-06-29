@@ -11,11 +11,16 @@ const static int one = 1;
 const static int sparse = 0;
 
 /* Prototypes */
-double _sag_constant_iteration(double * w, double * Xt, double * y,
-                                 double lambda, double alpha, int * iVals,
-                                 double * d, double * g, int * covered,
-                                 double nCovered, int nSamples, 
-                                 int nVars, int maxIter, int k);
+static inline void _sag_constant_iteration(GlmModel * model, double * w,
+                                           double * Xt, double * y,
+                                           double lambda, double alpha,
+                                           int * iVals, double * d, double * g,
+                                           int * covered, double * nCovered,
+                                           int nSamples, int nVars,
+                                           int maxIter, int k);
+/*============\
+| entry-point |
+\============*/
 
 /**
  * Logistic regression stochastic average gradient trainer
@@ -40,6 +45,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   // int * lastVisited;
   // int * jc, * ir;
   // double c=1, * cumsum;
+
   /*======\
   | Input |
   \======*/
@@ -61,7 +67,13 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
   if (DEBUG) Rprintf("nVars: %d\n", nVars);
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
-
+  
+  /*======\
+  | Model |
+  \======*/
+  // TODO(Ishmael): Model Dispatch should go here
+  GlmModel model = {logistic_loss, logistic_grad};
+  
   /*===============\
   | Error Checking |
   \===============*/
@@ -99,10 +111,9 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   
   for (int k = 0; k < maxIter; k++) {
     // Runing Iteration
-    nCovered = _sag_constant_iteration(w, Xt, y, lambda, alpha,
-                                       iVals, d, g, covered, nCovered,
-                                       nSamples, nVars, maxIter, k);
-
+    _sag_constant_iteration(&model, w, Xt, y, lambda, alpha,
+                            iVals, d, g, covered, &nCovered,
+                            nSamples, nVars, maxIter, k);
   }
   if (sparse) {
     // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
@@ -140,11 +151,11 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
 }
 
 
-double _sag_constant_iteration(double * w, double * Xt, double * y,
-                               double lambda, double alpha, int * iVals,
-                               double * d, double * g, int * covered,
-                               double nCovered, int nSamples, 
-                               int nVars, int maxIter, int k) {
+static inline void _sag_constant_iteration(GlmModel * model, double * w, double * Xt,
+                                           double * y, double lambda, double alpha,
+                                           int * iVals, double * d, double * g,
+                                           int * covered, double * nCovered,
+                                           int nSamples, int nVars, int maxIter, int k) {
   // TODO(Ishmael): Rename k
   
   /* Select next training example */
@@ -162,10 +173,10 @@ double _sag_constant_iteration(double * w, double * Xt, double * y,
     innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
   }
 
-  double sig = logistic_grad(y[i], innerProd);
+  double sig = model->grad(y[i], innerProd);
 
   /* Update direction */
-  double scaling;
+  double scaling = 0;
   if (sparse) {
     // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
   } else {
@@ -178,7 +189,7 @@ double _sag_constant_iteration(double * w, double * Xt, double * y,
   /* Update the number of examples that we have seen */
   if (covered[i] == 0) {
     covered[i] = 1;
-    nCovered++;
+    (*nCovered)++;
   }
 
   /* Update parameters */
@@ -187,9 +198,7 @@ double _sag_constant_iteration(double * w, double * Xt, double * y,
   } else {
     scaling = 1 - alpha * lambda;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    scaling = -alpha/nCovered;
+    scaling = -alpha/(*nCovered);
     F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
   }
-
-  return nCovered;
 }
