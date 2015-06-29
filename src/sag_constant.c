@@ -14,7 +14,7 @@ const static int sparse = 0;
 double _sag_constant_iteration(double * w, double * Xt, double * y,
                                  double lambda, double alpha, int * iVals,
                                  double * d, double * g, int * covered,
-                                 int nCovered, int nSamples, 
+                                 double nCovered, int nSamples, 
                                  int nVars, int maxIter, int k);
 
 /**
