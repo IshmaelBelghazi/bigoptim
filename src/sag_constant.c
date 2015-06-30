@@ -19,20 +19,21 @@ const static int sparse = 0;
 /**
  * Logistic regression stochastic average gradient trainer
  *
- * @param w_s(p, 1) weights
- * @param Xt_s(p, n) real fature matrix
- * @param y_s(n, 1) {-1, 1} target matrix
- * @param lambda_s scalar regularization parameter
- * @param stepSize_s scalar constant step size
- * @param iVals_s(max_iter, 1) sequence of examples to choose
- * @param d_s(p, 1) initial approximation of average gradient
- * @param g_s(n, 1) previous derivatives of loss
- * @param covered_s(n, 1) whether the example has been visited
+ * @param w(p, 1) weights
+ * @param Xt(p, n) real fature matrix
+ * @param y(n, 1) {-1, 1} target matrix
+ * @param lambda scalar regularization parameter
+ * @param stepSize scalar constant step size
+ * @param iVals(max_iter, 1) sequence of examples to choose
+ * @param d(p, 1) initial approximation of average gradient
+ * @param g(n, 1) previous derivatives of loss
+ * @param covered(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
-SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
-                    SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                    SEXP covered_s) {
+SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
+                    SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
+                    SEXP covered) {
+  
   // Initializing garbage collection protection counter
   int nprot = 0;
   /*======\
@@ -40,43 +41,43 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   \======*/
   
   /* Initializing dataset */
-  Dataset train_set = {.Xt = REAL(Xt_s),
-                       .y = REAL(y_s),
-                       .iVals = INTEGER(iVals_s),
-                       .covered = INTEGER(covered_s),
+  Dataset train_set = {.Xt = REAL(Xt),
+                       .y = REAL(y),
+                       .iVals = INTEGER(iVals),
+                       .covered = INTEGER(covered),
                        .nCovered = 0,
-                       .nSamples = INTEGER(GET_DIM(Xt_s))[1],
-                       .nVars = INTEGER(GET_DIM(Xt_s))[0],
+                       .nSamples = INTEGER(GET_DIM(Xt))[1],
+                       .nVars = INTEGER(GET_DIM(Xt))[0],
                        .sparse = sparse};
 
   /* Initializing Trainer */
-  GlmTrainer trainer = {.lambda = *REAL(lambda_s),
-                         .alpha = *REAL(stepSize_s),
-                         .d = REAL(d_s),
-                         .g = REAL(g_s),
+  GlmTrainer trainer = {.lambda = *REAL(lambda),
+                         .alpha = *REAL(stepSize),
+                         .d = REAL(d),
+                         .g = REAL(g),
                          .iter = 0,
-                         .maxIter = INTEGER(GET_DIM(iVals_s))[0],
+                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                          .step = _sag_constant_iteration};
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
-  GlmModel model = {.w = REAL(w_s), .loss=logistic_loss, .grad=logistic_grad};
+  GlmModel model = {.w = REAL(w), .loss=logistic_loss, .grad=logistic_grad};
 
   /*===============\
   | Error Checking |
   \===============*/
-  if (train_set.nVars != INTEGER(GET_DIM(w_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(y_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (train_set.nVars != INTEGER(GET_DIM(d_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(g_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(covered_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must have the same number of rows");
   }
   // TODO(Ishmael): SAG_logistic_BLAS line 62
@@ -95,7 +96,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-  double nCovered = train_set.nCovered;
+
   for (trainer.iter = 0; trainer.iter < trainer.maxIter; trainer.iter++) {
     // Runing Iteration
     trainer.step(&trainer, &model, &train_set);
