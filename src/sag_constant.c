@@ -116,16 +116,12 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
   Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
 
-  /* Assigning variables to list */
+  /* Assigning variables to SEXP list */
   SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  ASSIGN_TO_R_VECTOR(results, w_return, d_return, g_return, covered_return);  // in utils.h
-  
-  /* Setting list names */
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
+  /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  const char * names[4] = {"w", "d", "g", "covered"};
-  for (int i = 0; i < 4; i++) {
-  SET_STRING_ELT(results_names, i, mkChar(names[i]));
-  }
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);

@@ -11,18 +11,21 @@
     }                                                   \
 }
 
-/* Assigning Several SEXP to a vector SEXP */
-#define ASSIGN_TO_R_VECTOR(vector, ...) {         \
-    SEXP * list = (SEXP []){__VA_ARGS__, NULL};   \
-    for (int i = 0; list[i] != NULL; i++) {       \
-      SET_VECTOR_ELT(vector, i, list[i]);         \
-    }                                             \
-  }                                               \
-
-/* */
-
-
-//#define ASSIGN_TO_R_VECTOR()
+/* Incremental apply like Macro */
+#define INC_APPLY(type, action, subject, ...) {        \
+    type * list = (type []){__VA_ARGS__, NULL};        \
+    for (int i = 0; list[i] != NULL; i++) {            \
+      action(subject, i, list[i]);                     \
+    }                                                  \
+  }                                                    \
+  
+/* Incremental apply like Macro with preprocessing on list elements */
+#define INC_APPLY_SUB(type, action, subaction, subject, ...) {   \
+    type * list = (type []){__VA_ARGS__, NULL};                  \
+    for (int i = 0; list[i] != NULL; i++) {                      \
+      action(subject, i, subaction(list[i]));                    \
+    }                                                            \
+  }                                                              \
 
 /* Prototypes */
 double _log_sum_exp(const double * restrict array, const int ar_size);
