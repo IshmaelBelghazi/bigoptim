@@ -2,6 +2,10 @@
 
 const static int one = 1;
 
+/*============================\
+| SAG with constant step size |
+\============================*/
+
 void _sag_constant_iteration(GlmTrainer * trainer,
                              GlmModel * model,
                              Dataset * dataset) {
@@ -27,7 +31,6 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
   } else {
     innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
-    
   }
 
   double grad = model->grad(y[i], innerProd);
@@ -63,3 +66,13 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   /* if (sparse) { */
   /*   // TODO(Ishmael): Line 153 in SAG_logistic_BLAS */
   /* } */
+
+
+/*====================\
+| SAG with linesearch |
+\====================*/
+
+
+/*===========================\
+| SAG with Adaptive Sampling |
+\===========================*/

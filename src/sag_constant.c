@@ -3,6 +3,7 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "utils.h"
 #include "dataset.h"
 #include "trainers.h"
 #include "glm_models.h"
@@ -101,9 +102,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     // Runing Iteration
     trainer.step(&trainer, &model, &train_set);
   }
-  if (sparse) {
-    // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
-  }
 
   /*=======\
   | Return |
@@ -120,10 +118,8 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
 
   /* Assigning variables to list */
   SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  SET_VECTOR_ELT(results, 0, w_return);
-  SET_VECTOR_ELT(results, 1, d_return);
-  SET_VECTOR_ELT(results, 2, g_return);
-  SET_VECTOR_ELT(results, 3, covered_return);
+  ASSIGN_TO_R_VECTOR(results, w_return, d_return, g_return, covered_return);  // in utils.h
+  
   /* Setting list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
   const char * names[4] = {"w", "d", "g", "covered"};
