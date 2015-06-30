@@ -3,6 +3,7 @@
 #include <math.h>
 
 typedef struct {
+  double * w; // Weights (p, 1)
   double (*loss)(double, double);
   double (*grad)(double, double);
 } GlmModel;

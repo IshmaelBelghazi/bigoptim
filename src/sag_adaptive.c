@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <math.h> // TODO(Ishmael): Consider using R math functions
+#include <math.h>
 #include <R.h>
 #include <Rdefines.h>
 #include <Rinternals.h>

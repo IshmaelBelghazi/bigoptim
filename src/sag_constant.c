@@ -6,21 +6,12 @@
 #include "dataset.h"
 #include "trainers.h"
 #include "glm_models.h"
-
+#include "sag_step.h"
 
 /* Constant */
-const static int DEBUG = 0;
-const static int one = 1;
 const static int sparse = 0;
 
-/* Prototypes */
-static inline void _sag_constant_iteration(GlmModel * model, double * w,
-                                           double * Xt, double * y,
-                                           double lambda, double alpha,
-                                           int * iVals, double * d, double * g,
-                                           int * covered, double * nCovered,
-                                           int nSamples, int nVars,
-                                           int maxIter, int k);
+
 /*============\
 | entry-point |
 \============*/
@@ -44,61 +35,36 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
                     SEXP covered_s) {
   // Initializing garbage collection protection counter
   int nprot = 0;
-  /* Variables  */
-  // int * lastVisited;
-  // int * jc, * ir;
-  // double c=1, * cumsum;
-
   /*======\
   | Input |
   \======*/
-
+  
   /* Initializing dataset */
   Dataset train_set = {.Xt = REAL(Xt_s),
                        .y = REAL(y_s),
+                       .iVals = INTEGER(iVals_s),
                        .covered = INTEGER(covered_s),
                        .nCovered = 0,
                        .nSamples = INTEGER(GET_DIM(Xt_s))[1],
-                       .nVars = INTEGER(GET_DIM(Xt_s))[0]};
+                       .nVars = INTEGER(GET_DIM(Xt_s))[0],
+                       .sparse = sparse};
 
   /* Initializing Trainer */
-  SAGConstant trainer = {.w = REAL(w_s),
-                         .lambda = *REAL(lambda_s),
+  GlmTrainer trainer = {.lambda = *REAL(lambda_s),
                          .alpha = *REAL(stepSize_s),
                          .d = REAL(d_s),
                          .g = REAL(g_s),
+                         .iter = 0,
                          .maxIter = INTEGER(GET_DIM(iVals_s))[0],
-                         .iVals = INTEGER(iVals_s)};
-    /* Initializing Model */
-  
+                         .step = _sag_constant_iteration};
+  /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
-  GlmModel model = {.loss=logistic_loss, .grad=logistic_grad};
-  
-  // double * w = REAL(w_s);
-  // double * Xt = REAL(Xt_s);
-  // double * y = REAL(y_s);
-  // double lambda = *REAL(lambda_s);
-  // double alpha = *REAL(stepSize_s);
-  // int * iVals = INTEGER(iVals_s);
-  // if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
-  // double * d = REAL(d_s);
-  // double * g = REAL(g_s);
-  // int * covered = INTEGER(covered_s);
-  // if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
-  /* Compute sizes */
-  // int nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  // int nVars = INTEGER(GET_DIM(Xt_s))[0];
-  // int maxIter = INTEGER(GET_DIM(iVals_s))[0];
-  //if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
-  //if (DEBUG) Rprintf("nVars: %d\n", nVars);
-  // if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
-  
+  GlmModel model = {.w = REAL(w_s), .loss=logistic_loss, .grad=logistic_grad};
 
-  
   /*===============\
   | Error Checking |
   \===============*/
-  if (train_set.nVars != (int)INTEGER(GET_DIM(w_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
   }
   if (train_set.nSamples != INTEGER(GET_DIM(y_s))[0]) {
@@ -130,24 +96,9 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
   double nCovered = train_set.nCovered;
-  for (int k = 0; k < trainer.maxIter; k++) {
+  for (trainer.iter = 0; trainer.iter < trainer.maxIter; trainer.iter++) {
     // Runing Iteration
-
-    _sag_constant_iteration(&model,
-                            trainer.w,
-                            train_set.Xt,
-                            train_set.y,
-                            trainer.lambda,
-                            trainer.alpha,
-                            trainer.iVals,
-                            trainer.d,
-                            trainer.g,
-                            train_set.covered,
-                            &nCovered,
-                            train_set.nSamples,
-                            train_set.nVars,
-                            trainer.maxIter,
-                            k);
+    trainer.step(&trainer, &model, &train_set);
   }
   if (sparse) {
     // TODO(Ishmael): Line 153 in SAG_logistic_BLAS
@@ -158,7 +109,7 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   \=======*/
   /* Preparing return variables  */
   SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), trainer.w, train_set.nVars);
+  Memcpy(REAL(w_return), model.w, train_set.nVars);
   SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
   Memcpy(REAL(d_return), trainer.d, train_set.nVars);
   SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
@@ -184,55 +135,3 @@ SEXP C_sag_constant(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   return results;
 }
 
-
-static inline void _sag_constant_iteration(GlmModel * model, double * w, double * Xt,
-                                           double * y, double lambda, double alpha,
-                                           int * iVals, double * d, double * g,
-                                           int * covered, double * nCovered,
-                                           int nSamples, int nVars, int maxIter, int k) {
-  // TODO(Ishmael): Rename k
-  
-  /* Select next training example */
-  int i = iVals[k] - 1;
-  /* Compute current values of needed parameters */
-  if (sparse && k > 0) {
-    //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
-  }
-    
-  /* Compute derivative of loss */
-  double innerProd = 0;
-  if (sparse) {
-    //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
-  } else {
-    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
-  }
-
-  double sig = model->grad(y[i], innerProd);
-
-  /* Update direction */
-  double scaling = 0;
-  if (sparse) {
-    // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
-  } else {
-    scaling = sig - g[i];
-    F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
-  }
-
-  /* Store derivative of loss */
-  g[i] = sig;
-  /* Update the number of examples that we have seen */
-  if (covered[i] == 0) {
-    covered[i] = 1;
-    (*nCovered)++;
-  }
-
-  /* Update parameters */
-  if (sparse) {
-    // TODO(Ishmael): Line 135 in SAG_logistic_BLAS
-  } else {
-    scaling = 1 - alpha * lambda;
-    F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    scaling = -alpha/(*nCovered);
-    F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
-  }
-}
