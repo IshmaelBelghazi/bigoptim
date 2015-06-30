@@ -25,7 +25,7 @@ const static int sparse = 0;
  * @param lambda scalar regularization parameter
  * @param stepSize scalar constant step size
  * @param iVals(max_iter, 1) sequence of examples to choose
- * @param d(p, 1) initial approximation of average gradient
+ * @param d(p, 1) approximation of average gradient
  * @param g(n, 1) previous derivatives of loss
  * @param covered(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)

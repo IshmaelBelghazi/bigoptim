@@ -1,8 +1,6 @@
 #include "sag_step.h"
 
 const static int one = 1;
-const static int DEBUG = 0;
-
 
 void _sag_constant_iteration(GlmTrainer * trainer,
                              GlmModel * model,
@@ -17,7 +15,7 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   double * g = trainer->g;
 
   /* Select next training example */
-  int i = dataset->iVals[trainer->iter] - 1;
+  int i = dataset->iVals[trainer->iter] - 1;  // start from 1?
   /* Compute current values of needed parameters */
   if (dataset->sparse && trainer->iter > 0) {
     //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
@@ -28,23 +26,23 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   if (dataset->sparse) {
     //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
   } else {
-    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars*i], &one);
+    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     
   }
 
-  double sig = model->grad(y[i], innerProd);
+  double grad = model->grad(y[i], innerProd);
 
   /* Update direction */
   double scaling = 0;
   if (dataset->sparse) {
     // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
   } else {
-    scaling = sig - g[i];
-    F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
+    scaling = grad - g[i];
+    F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
   }
 
   /* Store derivative of loss */
-  g[i] = sig;
+  g[i] = grad;
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1;
@@ -62,3 +60,6 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   }
 
 }
+  /* if (sparse) { */
+  /*   // TODO(Ishmael): Line 153 in SAG_logistic_BLAS */
+  /* } */
