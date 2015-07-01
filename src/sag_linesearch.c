@@ -29,14 +29,9 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
                       SEXP covered_s, SEXP stepSizeType_s) {
   // Initializing protection counter
   int nprot = 0;
-  /* Variables  */
-  // int * lastVisited;
-  // int temp;
-  // int * jc, * ir;  
+
   double alpha,  nCovered=0;
-  // double c = 1;
-  // double * cumsum;
-  
+
   /*======\
   | Input |
   \======*/

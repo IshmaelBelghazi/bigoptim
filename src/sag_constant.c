@@ -12,7 +12,6 @@
 /* Constant */
 const static int sparse = 0;
 
-
 /*============\
 | entry-point |
 \============*/
@@ -53,12 +52,12 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
 
   /* Initializing Trainer */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
-                         .alpha = *REAL(stepSize),
-                         .d = REAL(d),
-                         .g = REAL(g),
-                         .iter = 0,
-                         .maxIter = INTEGER(GET_DIM(iVals))[0],
-                         .step = _sag_constant_iteration};
+                        .alpha = *REAL(stepSize),
+                        .d = REAL(d),
+                        .g = REAL(g),
+                        .iter = 0,
+                        .maxIter = INTEGER(GET_DIM(iVals))[0],
+                        .step = _sag_constant_iteration};
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.w = REAL(w), .loss=logistic_loss, .grad=logistic_grad};
