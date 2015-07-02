@@ -19,7 +19,7 @@ const static int DEBUG = 0;
  *     @param g_s(n, 1) previous derivatives of loss
  *     @param covered_s(n, 1) whether the example has been visited
  *     @param stepSizeType_s scalar default is 1 to use 1/L, set to 2 to
- *     use 2/(L + n*myu)
+ *     use 2/(L + n*mu)
  *     @return optimal weights (p, 1)
  */
 SEXP C_sag_linesearch_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
