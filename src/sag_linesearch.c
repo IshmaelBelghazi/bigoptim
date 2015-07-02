@@ -89,7 +89,6 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
   if (DEBUG) Rprintf("nVars: %d\n", nVars);
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
-  // FIXME(Ishmael): Use size_t instead of int for indexing
   for(int i = 0; i < nSamples; i++) {
     if (covered[i]!=0) nCovered++;
   }

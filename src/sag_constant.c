@@ -30,6 +30,7 @@ const static int sparse = 0;
  * @param covered(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
+
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
                     SEXP covered) {
