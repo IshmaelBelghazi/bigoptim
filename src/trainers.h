@@ -10,6 +10,12 @@ typedef struct GlmTrainer {
   double * g;  // Previous derivative of loss
   int iter;  // Current Iteration count
   int maxIter;  // Maximum number of iterations
+  int stepSizeType;  //  default is 1 to use 1/L, set to 2 to use 2(L
+                     //  + n * mu)
+  double * Lmax;  // Initial approximation of global Lipschitz
+                  // constant
+  double * Li;  // Initial Approximation of individual Lipschitz
+                // constant
   /* Performs a single step of the attached SAG algorithm */
   void (*step)(struct GlmTrainer *, GlmModel *, Dataset *); 
 } GlmTrainer;
