@@ -7,5 +7,6 @@
 #include "trainers.h"
 
 void _sag_constant_iteration(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
+void _sag_linesearch_iteration(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
 
 #endif /* SAG_STEP_H_ */
