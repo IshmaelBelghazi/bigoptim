@@ -14,22 +14,22 @@ const static double precision = 1.490116119384765625e-8;
 /**
  *     Logistic regression stochastic average gradient trainer
  *    
- *     @param w_s(p, 1) weights
- *     @param Xt_s(p, n) real feature matrix
- *     @param y_s(n, 1) {-1, 1} target matrix
- *     @param lambda_s scalar regularization parameters
- *     @param stepSizeType_s scalar constant step size
- *     @param iVals_s(max_iter, 1) sequence of examples to choose
- *     @param d_s(p, 1) initial approximation of average gradient
- *     @param g_s(n, 1) previous derivatives of loss
- *     @param covered_s(n, 1) whether the example has been visited
- *     @param stepSizeType_s scalar default is 1 to use 1/L, set to 2 to
+ *     @param w(p, 1) weights
+ *     @param Xt(p, n) real feature matrix
+ *     @param y(n, 1) {-1, 1} target matrix
+ *     @param lambda scalar regularization parameters
+ *     @param stepSizeType scalar constant step size
+ *     @param iVals(max_iter, 1) sequence of examples to choose
+ *     @param d(p, 1) initial approximation of average gradient
+ *     @param g(n, 1) previous derivatives of loss
+ *     @param covered(n, 1) whether the example has been visited
+ *     @param stepSizeType scalar default is 1 to use 1/L, set to 2 to
  *     use 2/(L + n*myu)
  *     @return optimal weights (p, 1)
  */
-SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
-                      SEXP stepSize_s, SEXP iVals_s, SEXP d_s, SEXP g_s,
-                      SEXP covered_s, SEXP stepSizeType_s) {
+SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
+                      SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
+                      SEXP covered, SEXP stepSizeType) {
   // Initializing protection counter
   int nprot = 0;
 
@@ -37,28 +37,28 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   | Input |
   \======*/
   /* Initializing dataset */
-  Dataset train_set = {.Xt = REAL(Xt_s),
-                       .y = REAL(y_s),
-                       .iVals = INTEGER(iVals_s),
-                       .covered = INTEGER(covered_s),
+  Dataset train_set = {.Xt = REAL(Xt),
+                       .y = REAL(y),
+                       .iVals = INTEGER(iVals),
+                       .covered = INTEGER(covered),
                        .nCovered = 0,
-                       .nSamples = INTEGER(GET_DIM(Xt_s))[1],
-                       .nVars = INTEGER(GET_DIM(Xt_s))[0],
+                       .nSamples = INTEGER(GET_DIM(Xt))[1],
+                       .nVars = INTEGER(GET_DIM(Xt))[0],
                        .sparse = sparse};
 
   /* Initializing trainer  */
-  GlmTrainer trainer = {.lambda = *REAL(lambda_s),                        
-                        .d = REAL(d_s),
-                        .g = REAL(g_s),
+  GlmTrainer trainer = {.lambda = *REAL(lambda),                        
+                        .d = REAL(d),
+                        .g = REAL(g),
                         .iter = 0,
-                        .maxIter = INTEGER(GET_DIM(iVals_s))[0],
-                        .stepSizeType = *INTEGER(stepSizeType_s),
-                        .Li = REAL(stepSize_s),
+                        .maxIter = INTEGER(GET_DIM(iVals))[0],
+                        .stepSizeType = *INTEGER(stepSizeType),
+                        .Li = REAL(stepSize),
                         .precision = precision,
                         .step = _sag_linesearch_iteration};
   
   /* Initializing Model */
-  GlmModel model = {.w = REAL(w_s), .loss = logistic_loss, .grad = logistic_grad};
+  GlmModel model = {.w = REAL(w), .loss = logistic_loss, .grad = logistic_grad};
 
   
   // Mark deals with stepSizeType and xtx as optional arguments. This
@@ -69,19 +69,19 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   /*===============\
   | Error Checking |
   \===============*/
-  if ( train_set.nVars != INTEGER(GET_DIM(w_s))[0]) {
+  if ( train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(y_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (train_set.nVars != INTEGER(GET_DIM(d_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(g_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(covered_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must hvae the same number of rows");
   }
   // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
