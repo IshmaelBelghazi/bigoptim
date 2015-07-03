@@ -61,7 +61,9 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .step = _sag_constant_iteration};
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
-  GlmModel model = {.w = REAL(w), .loss=logistic_loss, .grad=logistic_grad};
+  GlmModel model = {.w = REAL(w),
+                    .loss = logistic_loss,
+                    .grad = logistic_grad};
 
   /*===============\
   | Error Checking |
