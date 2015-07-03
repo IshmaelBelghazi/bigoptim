@@ -16,6 +16,7 @@ typedef struct GlmTrainer {
                   // constant
   double * Li;  // Initial Approximation of individual Lipschitz
                 // constant
+  double precision;
   /* Performs a single step of the attached SAG algorithm */
   void (*step)(struct GlmTrainer *, GlmModel *, Dataset *); 
 } GlmTrainer;
