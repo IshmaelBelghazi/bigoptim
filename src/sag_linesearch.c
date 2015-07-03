@@ -3,11 +3,14 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "utils.h"
+#include "dataset.h"
+#include "trainers.h"
 #include "glm_models.h"
+#include "sag_step.h"
 
-const static int DEBUG = 0;
-const static int one = 1;
 const static int sparse = 0;
+const static double precision = 1.490116119384765625e-8;
 /**
  *     Logistic regression stochastic average gradient trainer
  *    
@@ -30,182 +33,111 @@ SEXP C_sag_linesearch(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s,
   // Initializing protection counter
   int nprot = 0;
 
-  double alpha,  nCovered=0;
-
   /*======\
   | Input |
   \======*/
-  double * w = REAL(w_s);
-  double * Xt = REAL(Xt_s);
-  double * y = REAL(y_s);
-  double lambda = *REAL(lambda_s);
-  double * Li = REAL(stepSize_s);
-  int * iVals = INTEGER(iVals_s);
-  if (DEBUG) Rprintf("iVals[0]: %d\n", iVals[0]);
-  double * d = REAL(d_s);
-  double * g = REAL(g_s);
-  int * covered = INTEGER(covered_s);
-  if (DEBUG) Rprintf("covered[0]: %d\n", covered[0]);
-  /* Compute sizes */
-  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  int nVars = INTEGER(GET_DIM(Xt_s))[0];
-  int maxIter = INTEGER(GET_DIM(iVals_s))[0];
-  double precision = 1.490116119384765625e-8;
+  /* Initializing dataset */
+  Dataset train_set = {.Xt = REAL(Xt_s),
+                       .y = REAL(y_s),
+                       .iVals = INTEGER(iVals_s),
+                       .covered = INTEGER(covered_s),
+                       .nCovered = 0,
+                       .nSamples = INTEGER(GET_DIM(Xt_s))[1],
+                       .nVars = INTEGER(GET_DIM(Xt_s))[0],
+                       .sparse = sparse};
 
+  /* Initializing trainer  */
+  GlmTrainer trainer = {.lambda = *REAL(lambda_s),                        
+                        .d = REAL(d_s),
+                        .g = REAL(g_s),
+                        .iter = 0,
+                        .maxIter = INTEGER(GET_DIM(iVals_s))[0],
+                        .stepSizeType = *INTEGER(stepSizeType_s),
+                        .Li = REAL(stepSize_s),
+                        .precision = precision,
+                        .step = _sag_linesearch_iteration};
+  
+  /* Initializing Model */
+  GlmModel model = {.w = REAL(w_s), .loss = logistic_loss, .grad = logistic_grad};
+
+  
   // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
-  int stepSizeType = *INTEGER(stepSizeType_s); 
-  double * xtx = Calloc(nSamples, double);
+  /* double * xtx = Calloc(train_set.nSamples, double); */
 
   /*===============\
   | Error Checking |
   \===============*/
-  if (nVars != INTEGER(GET_DIM(w_s))[0]) {
+  if ( train_set.nVars != INTEGER(GET_DIM(w_s))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(y_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(y_s))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (nVars != INTEGER(GET_DIM(d_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(d_s))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(g_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(g_s))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(covered_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(covered_s))[0]) {
     error("covered and y must hvae the same number of rows");
   }
   // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
-  if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's
-				       // code alpha is not declared yet.
-    error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
-  }
+  /* if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's */
+  /*       			       // code alpha is not declared yet. */
+  /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
+  /* } */
   /* Allocate Memory Needed for Lazy Update */
   if (sparse) {
     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 82
   }
+
   
-  if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
-  if (DEBUG) Rprintf("nVars: %d\n", nVars);
-  if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
-  for(int i = 0; i < nSamples; i++) {
-    if (covered[i]!=0) nCovered++;
+  for(int i = 0; i < train_set.nSamples; i++) {
+    if (train_set.covered[i]!=0) train_set.nCovered++;
   }
-  for (int i = 0; i < nSamples; i++) {
-    if (sparse) {
-      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103
-    } else {
-      xtx[i] = F77_CALL(ddot)(&nVars, &Xt[i * nVars], &one, &Xt[i * nVars], &one);
-    }
-  }
+  
+  /* for (int i = 0; i < train_set.nSamples; i++) { */
+  /*   if (sparse) { */
+  /*     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103 */
+  /*   } else { */
+  /*     xtx[i] = F77_CALL(ddot)(&train_set.nVars, &Xt[i * train_set.nVars], &one, &Xt[i * train_set.nVars], &one); */
+  /*   } */
+  /* } */
 
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
-  for (int k = 0; k < maxIter; k++) {
-    /* Select next training example */
-    int i = iVals[k] - 1;
-    if (sparse && k > 0) {
-      //TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 119
-    }
-    /* Compute derivative of loss */
-    double innerProd;
-    if (sparse) {
-      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 132
-    } else {
-      innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
-    }
-
-    double sig = logistic_grad(y[i], innerProd);
-    
-    /* Update Direction */
-    double scaling;
-    if (sparse) {
-      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 144
-    } else {
-      scaling = sig - g[i];
-      F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
-    }
-    /* Store Derivatives of loss */
-    g[i] = sig;
-    /* Update the number of examples that we have seen */
-    if (covered[i] == 0) {
-      covered[i] = 1; nCovered++;
-    }
-
-    /* Line-search for Li */
-    double fi = logistic_loss(y[i], innerProd);
-    /* Compute f_new as the function value obtained by taking 
-     * a step size of 1/Li in the gradient direction */
-    double wtx = innerProd;
-    double gg = sig * sig * xtx[i];
-    innerProd = wtx - xtx[i] * sig/(*Li);
-
-    double fi_new = logistic_loss(y[i], innerProd);
-    if (DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
-    while (gg > precision && fi_new > fi - gg/(2 * (*Li))) {
-      if (DEBUG) printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li = %e)\n", k+1, fi, fi_new, 1/(*Li));
-      *Li *= 2;
-      innerProd = wtx - xtx[i] * sig/(*Li);
-      fi_new = log(1 + exp(-y[i] * innerProd));
-    }
-    
-    /* Compute step size */
-    if (stepSizeType == 1) {
-      alpha = 1/(*Li + lambda);
-    }
-    else {
-      alpha = 2/(*Li + (nSamples + 1) * lambda);       
-    }
-    /* Update Parameters */
-    if (sparse) {
-      // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 187
-    } else {
-      scaling = 1 - alpha * lambda;
-      F77_CALL(dscal)(&nVars, &scaling, w, &one);
-      scaling = -alpha/nCovered;
-      F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
-    }
-
-    /* Decrease value of Lipschitz constant */
-    *Li *= pow(2.0, -1.0/nSamples); 
-  }
-
-  if (sparse) {
-    // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 208
+  for (trainer.iter = 0; trainer.iter  < trainer.maxIter; trainer.iter++) {
+    trainer.step(&trainer, &model, &train_set);
   }
 
   /* Freeing Allocated variables */
-  Free(xtx);
+  /* Free(xtx); */
 
   /*=======\
   | Return |
   \=======*/
   /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), w, nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), d, nVars);
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), g, nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), covered, nSamples);
+  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(w_return), model.w, train_set.nVars);
+  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
+  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
+  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
 
-  /* Assigning variables to list */
+  /* Assigning variables to SEXP list */
   SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  SET_VECTOR_ELT(results, 0, w_return);
-  SET_VECTOR_ELT(results, 1, d_return);
-  SET_VECTOR_ELT(results, 2, g_return);
-  SET_VECTOR_ELT(results, 3, covered_return);
-  /* Setting list names */
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
+  /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  const char * names[4] = {"w", "d", "g", "covered"};
-  for (int i = 0; i < 4; i++) {
-  SET_STRING_ELT(results_names, i, mkChar(names[i]));
-  }
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
   setAttrib(results, R_NamesSymbol, results_names);
-  // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
+
   UNPROTECT(nprot);
   return results;
 }
