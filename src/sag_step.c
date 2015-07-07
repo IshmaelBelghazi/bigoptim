@@ -157,3 +157,155 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
 /*===========================\
 | SAG with Adaptive Sampling |
 \===========================*/
+
+void _sag_adaptive_iteration(GlmTrainer * trainer,
+                             GlmModel * model,
+                             Dataset * dataset) {
+
+  /* Select next training example */
+  double offset = 0;
+  int i = 0;
+  double u = randVals[k + maxIter];
+  double z, Z;
+  if(randVals[k] < (double)(nSamples - nCovered)/(double)nSamples) {
+    /* Sample fron uncovered guys */
+    Z = unCoveredMatrix[nextpow2 * (nLevels - 1)];
+    for(int level=nLevels - 1;level >= 0; level--) {
+      z = offset + unCoveredMatrix[2 * i + nextpow2 * level];
+      if(u < z/Z) {
+        i = 2 * i;
+      } else {
+        offset = z;
+        i = 2 * i + 1;
+      }
+    }
+  } else {
+    /* Sample from covered guys according to estimate of Lipschitz constant */
+    Z = LiMatrix[nextpow2 * (nLevels - 1)] +
+        (Lmean + 2 * lambda) *
+        (nDescendants[nextpow2 * (nLevels - 1)] -
+         unCoveredMatrix[nextpow2 * (nLevels - 1)]);
+    for(int level = nLevels - 1; level  >= 0; level--) {
+      z = offset + LiMatrix[2 * i + nextpow2 * level] +
+          (Lmean + 2 * lambda) *
+          (nDescendants[2 * i + nextpow2 * level] -
+           unCoveredMatrix[2 * i + nextpow2 * level]);
+      if(u < z/Z) {
+        i = 2 * i;
+      } else {
+        offset = z;
+        i = 2 * i + 1;
+      }
+    }
+    if(DEBUG) Rprintf("i = %d\n", i);
+  }
+  
+  /* Compute current values of needed parameters */
+
+  if (sparse) {
+    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 192
+  }
+
+  /* Compute derivative of loss */
+  double innerProd = 0;
+  if (sparse) {
+    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 206
+  } else {
+    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
+  }
+    
+  double sig = logistic_grad(y[i], innerProd);
+        
+  /* Update direction */
+  double scaling;
+  if (sparse) {
+    // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
+  } else {
+    scaling = sig-g[i];
+    F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
+  }
+    
+  /* Store derivative of loss */
+  g[i] = sig;
+
+  /* Line-search for Li */
+  double Li_old = Li[i];
+  if(increasing && covered[i]) Li[i] /= 2;
+  double fi = logistic_loss(y[i], innerProd);
+
+  /* Compute f_new as the function value obtained by taking 
+   * a step size of 1/Li in the gradient direction */
+  double wtx = innerProd;
+  double gg = sig * sig * xtx[i];
+  innerProd = wtx - xtx[i] * sig/Li[i];
+
+  double fi_new = logistic_loss(y[i], innerProd);
+  if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
+  while (gg > precision && fi_new > fi - gg/(2*(Li[i]))) {
+    if (DEBUG) {  Rprintf("Lipschitz Backtracking (k = %d, fi = %e, * fi_new = %e, 1/Li = %e)\n", k +1 ,
+                          fi, fi_new, 1/(Li[i]));
+    }
+    Li[i] *= 2;
+    innerProd = wtx - xtx[i] * sig/Li[i];
+    fi_new = log(1 + exp(-y[i] * innerProd));            
+  }
+  if(Li[i] > *Lmax) *Lmax = Li[i];
+
+  /* Update the number of examples that we have seen */
+  int ind;
+  if (covered[i] == 0) {
+    covered[i] = 1;
+    nCovered++;
+    Lmean = Lmean *((double)(nCovered - 1)/(double)nCovered) +
+            Li[i]/(double)nCovered;
+            
+    /* Update unCoveredMatrix so we don't sample this guy when looking for a new guy */
+    ind = i;
+    for(int level = 0; level< nLevels; level++) {
+      unCoveredMatrix[ind + nextpow2 * level] -= 1;
+      ind = ind/2;
+    }
+    /* Update LiMatrix so we sample this guy proportional to its Lipschitz constant*/
+    ind = i;
+    for(int level = 0; level < nLevels; level++) {
+      LiMatrix[ind + nextpow2 * level] += Li[i];
+      ind = ind/2;
+    }
+  } else if (Li[i] != Li_old) {
+    Lmean = Lmean + (Li[i] - Li_old)/(double)nCovered;
+
+    /* Update LiMatrix with the new estimate of the Lipscitz constant */
+    ind = i;
+    for(int level = 0; level < nLevels; level++) {
+      LiMatrix[ind + nextpow2 * level] += (Li[i] - Li_old);
+      ind = ind/2;
+    }
+  }
+  if (DEBUG) {
+    for(int ind = 0; ind < nextpow2; ind++) {
+      for(int j = 0;j < nLevels; j++) {
+        Rprintf("%f ", LiMatrix[ind + nextpow2 * j]);
+      }
+      Rprintf("\n");
+    }
+  }
+  /* Compute step size */
+  double alpha = ((double)(nSamples - nCovered)/(double)nSamples)/(*Lmax + lambda) +
+                 ((double)nCovered/(double)nSamples) * (1/(2*(*Lmax + lambda)) +
+                                                        1/(2*(Lmean + lambda)));
+  /* Update parameters */
+  if (sparse) {
+    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 294
+  } else {
+    scaling = 1 - alpha * lambda;
+    F77_CALL(dscal)(&nVars, &scaling, w, &one);
+    scaling = -alpha/nCovered;
+    F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
+  }
+                
+  /* Decrease value of max Lipschitz constant */
+  if (increasing) {
+    *Lmax *= pow(2.0,-1.0/nSamples);
+  }
+
+}
