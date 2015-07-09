@@ -161,7 +161,7 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   }
 
   for(int k = 0; k < maxIter; k++) {
-    
+    // TODO(Ishmael): Add iteration for adaptive SAG
   }
 
   if (sparse) {

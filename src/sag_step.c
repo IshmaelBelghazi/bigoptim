@@ -1,7 +1,8 @@
 #include "sag_step.h"
 
 const static int one = 1;
-
+const static int DEBUG = 1;
+const static int sparse = 1;
 /*============================\
 | SAG with constant step size |
 \============================*/
@@ -162,6 +163,32 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
                              GlmModel * model,
                              Dataset * dataset) {
 
+  int nVars = dataset->nVars;
+  double * w = model->w;
+  double * Xt = dataset->Xt;
+  double * y = dataset->y;
+  double * d = trainer->d;
+  double * g = trainer->g;
+  double * Li = dataset->Li;
+  double * Lmax = dataset->Lmax;
+  double lambda = trainer->lambda;
+  int nSamples = dataset->nSamples;
+  double precision = trainer->precision;
+  int increasing = dataset->increasing;
+  
+  double * randVals = dataset->randVals;
+  int maxIter = trainer->maxIter;
+  int k = trainer->iter;
+  int * covered = dataset->covered;
+  double nCovered = dataset->nCovered;
+
+  int nextpow2 = dataset->nextpow2;
+  int nLevels = dataset->nLevels;
+  double * nDescendants = dataset->nDescendants;
+  double * unCoveredMatrix = dataset->unCoveredMatrix;
+  double * LiMatrix = dataset->LiMatrix;
+  double Lmean = dataset->Lmean;
+                     
   /* Select next training example */
   double offset = 0;
   int i = 0;
@@ -236,8 +263,9 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
   /* Compute f_new as the function value obtained by taking 
    * a step size of 1/Li in the gradient direction */
   double wtx = innerProd;
-  double gg = sig * sig * xtx[i];
-  innerProd = wtx - xtx[i] * sig/Li[i];
+  double xtx = F77_CALL(ddot)(&dataset->nVars, &Xt[i * dataset->nVars], &one, &Xt[i * dataset->nVars], &one);
+  double gg = sig * sig * xtx;
+  innerProd = wtx - xtx * sig/Li[i];
 
   double fi_new = logistic_loss(y[i], innerProd);
   if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
@@ -246,7 +274,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
                           fi, fi_new, 1/(Li[i]));
     }
     Li[i] *= 2;
-    innerProd = wtx - xtx[i] * sig/Li[i];
+    innerProd = wtx - xtx * sig/Li[i];
     fi_new = log(1 + exp(-y[i] * innerProd));            
   }
   if(Li[i] > *Lmax) *Lmax = Li[i];

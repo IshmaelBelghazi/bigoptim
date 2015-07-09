@@ -2,7 +2,8 @@
 #define TRAINER_H_
 #include "dataset.h"
 #include "glm_models.h"
-
+//TODO(Ishmael): Lmax and Li depends on the dataset. They should be
+//moved to Dataset
 typedef struct GlmTrainer {
   double lambda; // scalar regularization parameter
   double alpha;  // Constant step-size
