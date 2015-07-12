@@ -44,7 +44,8 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                        .nCovered = 0,
                        .nSamples = INTEGER(GET_DIM(Xt))[1],
                        .nVars = INTEGER(GET_DIM(Xt))[0],
-                       .sparse = sparse};
+                       .sparse = sparse,
+                       .Li = REAL(stepSize)};
 
   /* Initializing trainer  */
   GlmTrainer trainer = {.lambda = *REAL(lambda),                        
@@ -53,7 +54,6 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .stepSizeType = *INTEGER(stepSizeType),
-                        .Li = REAL(stepSize),
                         .precision = precision,
                         .step = _sag_linesearch_iteration};
   
