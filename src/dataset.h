@@ -17,9 +17,10 @@ typedef struct {
                   // constant
   double * Li;  // Initial Approximation of individual Lipschitz
                 // constant
+  double Lmean;  //Mean of Lipschitz coefficient of covered varibles
   int increasing;  // 1 to allow lipschitz constant to increase. 0 To
                    // only allow them to decrease
-  double Lmean;  //Mean of Lipschitz coefficient of covered varibles
+  
   /* Adaptive data-structure */
   int nextpow2;  // Next power of 2
   int nLevels;  // Number of levels
