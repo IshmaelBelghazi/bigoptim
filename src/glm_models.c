@@ -1,19 +1,25 @@
 #include "glm_models.h"
 
-/*=======\
-| Losses |
-\=======*/
+/*=========\
+| BINOMIAL |
+\=========*/
 /* loss function (not error function)*/
-double logistic_loss(double y, double innerProd) {
+double binomial_loss(double y, double innerProd) {
   return log(1 + exp(-y * innerProd));
 }
-
-/*==========\
-| Gradients |
-\==========*/
 /*Gradient of loss function*/
-double logistic_grad(double y, double innerProd) {
+double binomial_grad(double y, double innerProd) {
   return -y/(1 + exp(y * innerProd));
 }
-
+/*=========\
+| GAUSSIAN |
+\=========*/
+/* loss function (not error function)*/
+double gaussian_loss(double y, double innerProd) {
+  return 0.5 * pow(innerProd - y, 2);
+}
+/*Gradient of loss function*/
+double gaussian_grad(double y, double innerProd) {
+  return innerProd - y;
+}
 
