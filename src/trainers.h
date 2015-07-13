@@ -2,8 +2,12 @@
 #define TRAINER_H_
 #include "dataset.h"
 #include "glm_models.h"
-//TODO(Ishmael): Lmax and Li depends on the dataset. They should be
-//moved to Dataset
+
+/*============\
+| GLM trainer |
+\============*/
+
+/* Trainer structs */
 typedef struct GlmTrainer {
   double lambda; // scalar regularization parameter
   double alpha;  // Constant step-size
@@ -17,5 +21,9 @@ typedef struct GlmTrainer {
   /* Performs a single step of the attached SAG algorithm */
   void (*step)(struct GlmTrainer *, GlmModel *, Dataset *); 
 } GlmTrainer;
+
+/* trainer type enum */
+typedef enum {CONSTANT, LINESEARCH, ADAPTIVE} Sag_type;
+
 
 #endif /* TRAINER_H_ */
