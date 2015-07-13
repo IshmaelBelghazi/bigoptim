@@ -12,3 +12,16 @@
     y <- matrix(y, ncol=1)
     return(list(X=X, y=y, true_params=true_params))
 }
+
+##' @export
+.simulate_gaussian <- function(true_params, sample_size, intercept=FALSE) {
+    n_params <- length(true_params)
+    X <- matrix(runif(n_params * sample_size), ncol=n_params)
+    if (intercept) {
+        X[, 1] <- 1
+    }
+    z <- X %*% true_params
+    y <- z + rnorm(n=sample_size)
+    y <- matrix(y, ncol=1)
+    return(list(X=X, y=y, true_params=true_params))
+}
