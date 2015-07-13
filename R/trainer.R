@@ -20,7 +20,7 @@
 sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
-                         d=NULL, g=NULL, covered=NULL) {
+                         d=NULL, g=NULL, covered=NULL, family=1) {
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
     }
@@ -49,7 +49,9 @@ sag_constant <- function(X, y, lambda=0,
         storage.mode(covered) <- "integer"
     }
     ## Calling C function
-        .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered)
+    .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
+          as.integer(family)
+          )
 }
 
 ## * Sag with Line-search
@@ -58,7 +60,7 @@ sag_constant <- function(X, y, lambda=0,
 sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    stepSize=NULL, iVals=NULL,
                    d=NULL, g=NULL, covered=NULL,
-                   stepSizeType=1) {
+                   stepSizeType=1, family=1) {
     
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
@@ -89,7 +91,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
     }
     ## Calling C function
     .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
-          as.integer(stepSizeType))
+          as.integer(stepSizeType), as.integer(family))
     
 }
 ## * Sag with line-search and adaptive sampling
@@ -97,7 +99,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
 ##' @useDynLib  bigoptim C_sag_adaptive
 sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
                             Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
-                            d=NULL, g=NULL, covered=NULL, increasing=TRUE) {
+                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1) {
 
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
