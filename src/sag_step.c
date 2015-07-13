@@ -1,7 +1,7 @@
 #include "sag_step.h"
 
 const static int one = 1;
-const static int DEBUG = 1;
+const static int DEBUG = 0;
 const static int sparse = 1;
 /*============================\
 | SAG with constant step size |
@@ -17,7 +17,6 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   double * y = dataset->y;
   double * d = trainer->d;
   double * g = trainer->g;
-
 
   /* Select next training example */
   int i = dataset->iVals[trainer->iter] - 1;  // start from 1?
@@ -82,7 +81,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   double * y = dataset->y;
   double * d = trainer->d;
   double * g = trainer->g;
-  double * Li = trainer-> Li;
+  double * Li = dataset-> Li;
   
   /* Select next training example */
   int i = dataset->iVals[trainer->iter] - 1;
@@ -127,7 +126,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   while (gg > trainer->precision && fi_new > fi - gg/(2 * (*Li))) {
     *Li *= 2;
     innerProd = wtx - xtx * grad/(*Li);
-    fi_new = log(1 + exp(-y[i] * innerProd));
+    fi_new = model->loss(y[i], innerProd);
   }
     
   /* Compute step size */
@@ -224,7 +223,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
         i = 2 * i + 1;
       }
     }
-    if(DEBUG) Rprintf("i = %d\n", i);
+    if(DEBUG) Rprintf("i = %d", i);
   }
   
   /* Compute current values of needed parameters */
@@ -241,41 +240,41 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
   }
     
-  double sig = logistic_grad(y[i], innerProd);
+  double grad = model->grad(y[i], innerProd);
         
   /* Update direction */
   double scaling;
   if (sparse) {
     // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
   } else {
-    scaling = sig-g[i];
+    scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
     
   /* Store derivative of loss */
-  g[i] = sig;
+  g[i] = grad;
 
   /* Line-search for Li */
   double Li_old = Li[i];
   if(increasing && covered[i]) Li[i] /= 2;
-  double fi = logistic_loss(y[i], innerProd);
+  double fi = model->loss(y[i], innerProd);
 
   /* Compute f_new as the function value obtained by taking 
    * a step size of 1/Li in the gradient direction */
   double wtx = innerProd;
-  double xtx = F77_CALL(ddot)(&dataset->nVars, &Xt[i * dataset->nVars], &one, &Xt[i * dataset->nVars], &one);
-  double gg = sig * sig * xtx;
-  innerProd = wtx - xtx * sig/Li[i];
+  double xtx = F77_CALL(ddot)(&nVars, &Xt[i * nVars], &one, &Xt[i * nVars], &one);
+  double gg = grad * grad * xtx;
+  innerProd = wtx - xtx * grad/Li[i];
 
-  double fi_new = logistic_loss(y[i], innerProd);
-  if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e\n", fi, fi_new, gg);
+  double fi_new = model->loss(y[i], innerProd);
+  if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e", fi, fi_new, gg);
   while (gg > precision && fi_new > fi - gg/(2*(Li[i]))) {
-    if (DEBUG) {  Rprintf("Lipschitz Backtracking (k = %d, fi = %e, * fi_new = %e, 1/Li = %e)\n", k +1 ,
+    if (DEBUG) {  Rprintf("Lipschitz Backtracking (k = %d, fi = %e, * fi_new = %e, 1/Li = %e)", k +1 ,
                           fi, fi_new, 1/(Li[i]));
     }
     Li[i] *= 2;
-    innerProd = wtx - xtx * sig/Li[i];
-    fi_new = log(1 + exp(-y[i] * innerProd));            
+    innerProd = wtx - xtx * grad/Li[i];
+    fi_new = model->loss(y[i], innerProd);            
   }
   if(Li[i] > *Lmax) *Lmax = Li[i];
 
@@ -314,7 +313,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
       for(int j = 0;j < nLevels; j++) {
         Rprintf("%f ", LiMatrix[ind + nextpow2 * j]);
       }
-      Rprintf("\n");
+      //Rprintf("\n");
     }
   }
   /* Compute step size */
@@ -333,7 +332,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
                 
   /* Decrease value of max Lipschitz constant */
   if (increasing) {
-    *Lmax *= pow(2.0,-1.0/nSamples);
+    *Lmax *= pow(2.0, -1.0/nSamples);
   }
 
 }
