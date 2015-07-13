@@ -29,7 +29,7 @@ const static double precision = 1.490116119384765625e-8;
  */
 SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                       SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType) {
+                      SEXP covered, SEXP stepSizeType, SEXP family) {
   // Initializing protection counter
   int nprot = 0;
 
@@ -58,8 +58,22 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .step = _sag_linesearch_iteration};
   
   /* Initializing Model */
-  GlmModel model = {.w = REAL(w), .loss = logistic_loss, .grad = logistic_grad};
+  GlmModel model = {.w = REAL(w)};
+  /* Choosing family */
+  switch (*INTEGER(family)) {
+    case GAUSSIAN:
+      model.grad = gaussian_grad;
+      model.loss = gaussian_loss;
+      break;
+    case BINOMIAL:
+      model.grad = binomial_grad;
+      model.loss = binomial_loss;
+      break;
+    default:
+      error("Unrecognized glm family");
+          }
 
+  
   
   // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default

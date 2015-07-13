@@ -33,7 +33,7 @@ const static int sparse = 0;
 
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered) {
+                    SEXP covered, SEXP family) {
   
   // Initializing garbage collection protection counter
   int nprot = 0;
@@ -61,9 +61,20 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .step = _sag_constant_iteration};
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
-  GlmModel model = {.w = REAL(w),
-                    .loss = logistic_loss,
-                    .grad = logistic_grad};
+  GlmModel model = {.w = REAL(w)};
+  /* Choosing family */
+  switch (*INTEGER(family)) {
+    case GAUSSIAN:
+      model.grad = gaussian_grad;
+      model.loss = gaussian_loss;
+      break;
+    case BINOMIAL:
+      model.grad = binomial_grad;
+      model.loss = binomial_loss;
+      break;
+    default:
+      error("Unrecognized glm family");
+          }
 
   /*===============\
   | Error Checking |

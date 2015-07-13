@@ -4,13 +4,17 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
-#include "glm_models.h"
 #include "utils.h"
+#include "dataset.h"
+#include "trainers.h"
+#include "glm_models.h"
+#include "sag_step.h"
 
 // TODO(Ishmael): Consider using R math functions
 const static int DEBUG = 0;
-const static int one = 1;
 const static int sparse = 0;
+const static double precision = 1.490116119384765625e-8;
+
 /**
  *   Stochastic Average Gradient Descent with line-search and adaptive
  *   lipschitz sampling
@@ -31,9 +35,9 @@ const static int sparse = 0;
  *     
  *   @return optimal weights (p, 1)
  */
-SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
-                    SEXP Li_s, SEXP randVals_s, SEXP d_s, SEXP g_s, SEXP covered_s,
-                    SEXP increasing_s) {
+SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
+                    SEXP Li, SEXP randVals, SEXP d, SEXP g, SEXP covered,
+                    SEXP increasing) {
   // initializing protection counter
   int nprot = 0;
   /* Variables */
@@ -50,46 +54,46 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   | Input |
   \======*/
 
-  Dataset train_set = { .Xt = REAL(Xt_s),}
+
+
+  /* Initializing dataset */
+  Dataset train_set = { .Xt = REAL(Xt),
+                        .y = REAL(y),
+                        .randVals = REAL(randVals),
+                        .nSamples = INTEGER(GET_DIM(Xt))[1],
+                        .nVars = INTEGER(GET_DIM(Xt))[0],
+                        .Lmax = REAL(Lmax),
+                        .Li = REAL(Li),
+                        .covered = INTEGER(covered),
+                        .increasing = *INTEGER(increasing),
+                        .sparse = sparse};
   
-  double * w = REAL(w_s);
-  double * Xt = REAL(Xt_s);
-  double * y = REAL(y_s);
-  double lambda = *REAL(lambda_s);
-  double * Lmax = REAL(Lmax_s);
-  double * Li = REAL(Li_s);
-  double * randVals = REAL(randVals_s);
-  double * d = REAL(d_s);
-  double * g = REAL(g_s);
-  int * covered = INTEGER(covered_s);
-  int increasing = *INTEGER(increasing_s);
-
-  /* Compute Sizes */
-  int nSamples = INTEGER(GET_DIM(Xt_s))[1];
-  int nVars = INTEGER(GET_DIM(Xt_s))[0];
-  int maxIter = INTEGER(GET_DIM(randVals_s))[0];
-  if (DEBUG) Rprintf("nSamples: %d\n", nSamples);
-  if (DEBUG) Rprintf("nVars: %d\n", nVars);
-  if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
-
-  double precision = 1.490116119384765625e-8;
-  double * xtx = Calloc(nSamples, double);
-
-
-  /* Error Checking */
-  if (nVars != INTEGER(GET_DIM(w_s))[0]) {
+  /* Initialzing trainer */
+  GlmTrainer trainer = {.lambda = *REAL(lambda),
+                        .d = REAL(d),
+                        .g = REAL(g),
+                        .iter = 0,
+                        .maxIter = INTEGER(GET_DIM(randVals))[0],
+                        .precision = precision,
+                        .step = _sag_adaptive_iteration};
+  
+   /* Initializing Model */
+   GlmModel model = {.w = REAL(w), .loss = binomial_loss, .grad = binomial_grad};
+  
+  /*Error Checking*/
+  if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(y_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (nVars != INTEGER(GET_DIM(d_s))[0]) {
+  if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(g_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (nSamples != INTEGER(GET_DIM(covered_s))[0]) {
+  if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must hvae the same number of rows");
   }
   // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 78
@@ -107,10 +111,10 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   /* Compute mean of covered variables */
   double Lmean = 0;
   double nCovered = 0;
-  for(int i = 0; i < nSamples; i++) {
-    if (covered[i] != 0) {
+  for(int i = 0; i < train_set.nSamples; i++) {
+    if (train_set.covered[i] != 0) {
       nCovered++;
-      Lmean += Li[i];
+      Lmean += train_set.Li[i];
     }
   }
   
@@ -118,18 +122,11 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     Lmean /= nCovered;
   }
   
-  for (int i = 0; i < nSamples; i++) {
-    if (sparse) {
-      // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103
-    } else {
-      // TODO(Ishmael): use a higher level BLAS OPERATION
-      xtx[i] = F77_CALL(ddot)(&nVars, &Xt[i * nVars], &one, &Xt[i * nVars], &one);
-    }
-  }
+
   /* Do the O(n log n) initialization of the data structures
      will allow sampling in O(log(n)) time */
-  int nextpow2 = pow(2, ceil(log2(nSamples)/log2(2)));
-  int nLevels = 1 + (int)ceil(log2(nSamples));
+  int nextpow2 = pow(2, ceil(log2(train_set.nSamples)/log2(2)));
+  int nLevels = 1 + (int)ceil(log2(train_set.nSamples));
   if (DEBUG) Rprintf("next power of 2 is: %d\n",nextpow2);
   if (DEBUG) Rprintf("nLevels = %d\n",nLevels);
   /* Counts number of descendents in tree */
@@ -138,10 +135,10 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double); 
   /* Sums Lipschitz constant of loss over descendants */
   double * LiMatrix = Calloc(nextpow2 * nLevels, double); 
-  for(int i = 0; i < nSamples; i++) {
+  for(int i = 0; i < train_set.nSamples; i++) {
     nDescendants[i] = 1;
-    if (covered[i]) {
-        LiMatrix[i] = Li[i];
+    if (train_set.covered[i]) {
+        LiMatrix[i] = train_set.Li[i];
     } else {
       unCoveredMatrix[i] = 1;
     }
@@ -160,8 +157,19 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
     }
   }
 
-  for(int k = 0; k < maxIter; k++) {
+  /* Continuing dataset initialisation */
+  train_set.Lmean = Lmean;
+  train_set.nextpow2 = nextpow2;
+  train_set.nDescendants = nDescendants;
+  train_set.unCoveredMatrix = unCoveredMatrix;
+  train_set.LiMatrix = LiMatrix;
+
+  
+
+  for(int k = 0; k < trainer.maxIter; k++) {
     // TODO(Ishmael): Add iteration for adaptive SAG
+    
+    trainer.step(&trainer, &model, &train_set);
   }
 
   if (sparse) {
@@ -169,7 +177,6 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   }
 
   /* Freeing allocated variables */
-  Free(xtx);
   Free(nDescendants);
   Free(unCoveredMatrix);
   Free(LiMatrix);
@@ -179,30 +186,23 @@ SEXP C_sag_adaptive(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
   \=======*/
   
   /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), w, nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), d, nVars);
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), g, nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), covered, nSamples);
+  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(w_return), model.w, train_set.nVars);
+  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
+  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
+  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
+  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
+  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
 
-  /* Assigning variables to list */
+  /* Assigning variables to SEXP list */
   SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  SET_VECTOR_ELT(results, 0, w_return);
-  SET_VECTOR_ELT(results, 1, d_return);
-  SET_VECTOR_ELT(results, 2, g_return);
-  SET_VECTOR_ELT(results, 3, covered_return);
-  /* Setting list names */
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
+  /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  const char * names[4] = {"w", "d", "g", "covered"};
-  for (int i = 0; i < 4; i++) {
-  SET_STRING_ELT(results_names, i, mkChar(names[i]));
-  }
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
   setAttrib(results, R_NamesSymbol, results_names);
-  // SEXP results = PROTECT(allocVector(VECSXP, 3)); nprot++;
-  UNPROTECT(nprot);
 
+  UNPROTECT(nprot);
   return results;
 }
