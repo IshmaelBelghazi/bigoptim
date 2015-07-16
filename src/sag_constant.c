@@ -10,7 +10,9 @@
 #include "sag_step.h"
 
 /* Constant */
+const static int one = 1;
 const static int sparse = 0;
+const static double TOL = 0.01;
 
 /*============\
 | entry-point |
@@ -86,7 +88,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       error("Unrecognized glm family");
   }
 
-  /*===============                             \
+  /*===============\
   | Error Checking |
   \===============*/
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
@@ -121,9 +123,25 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
 
-  for (trainer.iter = 0; trainer.iter < trainer.maxIter; trainer.iter++) {
-    // Runing Iteration
+  /* double d_norm = R_PosInf; */
+  /* for (trainer.iter = 0; trainer.iter < trainer.maxIter; trainer.iter++) { */
+  /*   // Runing Iteration */
+  /*   if (trainer.iter % 100 == 0) { */
+  /*     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one); */
+  /*     Rprintf("gradient norm %f \n", d_norm); */
+  /*   } */
+  /*   trainer.step(&trainer, &model, &train_set); */
+  /* } */
+
+
+  double d_norm = R_PosInf;
+  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL); 
+  while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
+    //Rprintf("Trainer.iter = %d \n", trainer.iter);
+    trainer.iter++;
+    d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
+    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL); 
   }
 
   /*=======\

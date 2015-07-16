@@ -9,8 +9,10 @@
 #include "glm_models.h"
 #include "sag_step.h"
 
+const static int one = 1;
 const static int sparse = 0;
 const static double precision = 1.490116119384765625e-8;
+const static double TOL = 0.01;
 /**
  *     Logistic regression stochastic average gradient trainer
  *    
@@ -133,10 +135,19 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
-  for (trainer.iter = 0; trainer.iter  < trainer.maxIter; trainer.iter++) {
-    trainer.step(&trainer, &model, &train_set);
-  }
+  /* for (trainer.iter = 0; trainer.iter  < trainer.maxIter; trainer.iter++) { */
+  /*   trainer.step(&trainer, &model, &train_set); */
+  /* } */
 
+  double d_norm = R_PosInf;
+  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL);
+  while (!stop_condition) {
+    trainer.step(&trainer, &model, &train_set);
+    //Rprintf("Trainer.iter = %d \n", trainer.iter);
+    trainer.iter++;
+    d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
+    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL);
+  }
   /* Freeing Allocated variables */
   /* Free(xtx); */
 

@@ -4,7 +4,7 @@ rm(list=ls())
 library(methods, quietly=TRUE)  ## hasArgs is not loaded by default by Rscript
 library(devtools, quietly=TRUE)
 pkg_path <-  "."
-try(unload(pkg_path))
+##try(unload(pkg_path))
 document(pkg_path)
 load_all(pkg_path)
 ## * Generating data
@@ -16,16 +16,29 @@ sample_size <- 1000
 sim <- .simulate_logistic(true_params=true_params,
                           sample_size=sample_size,
                           intercept=FALSE)
+maxiter = NULL
 ## Fitting with glm
 glm_fit <- glm.fit(sim$X, (sim$y + 1)/2, family=binomial())
 lambda <- 0
-sag_fit <- sag_constant(X=sim$X,
-                        y=sim$y,
-                        lambda=lambda)
+sag_fit_constant <- sag_constant(X=sim$X,
+                                 y=sim$y,
+                                 maxiter=maxiter,
+                                 lambda=lambda, family=1)
+
+sag_fit_ls <- sag_ls(X=sim$X,
+                     y=sim$y,
+                     maxiter=maxiter,
+                     lambda=lambda, family=1)
 
 print("True Parameters:")
 print(true_params)
 print("Estimated parameters glm:")
 print(coef(glm_fit))
-print("Estimated parameters (SAG):")
-print(sag_fit$w)
+print("Estimated parameters (SAG constant):")
+print(sag_fit_constant$w)
+print("Approximate Gradient norm (SAG constant):")
+print(norm(sag_fit_constant$d, type="F"))
+print("Estimated parameters (SAG LineSearch):")
+print(sag_fit_ls$w)
+print("Approximate Gradient norm (SAG linesearch):")
+print(norm(sag_fit_ls$d, type="F"))
