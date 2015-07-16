@@ -16,5 +16,6 @@ GPATH
 ^README-.*\.png$
 ^src/compile_commands.json$
 ^MakeR$
+^infer-out$
 GSYMS
 r_include
