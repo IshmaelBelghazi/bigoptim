@@ -32,7 +32,7 @@ double exponential_loss(double y, double innerProd) {
   return exp(-y * innerProd);
 }
 /* Exponential gradient function */
-double exponential_gradient(double y, double innerProd) {
+double exponential_grad(double y, double innerProd) {
   return -y * exp(-y * innerProd);
 }
 
