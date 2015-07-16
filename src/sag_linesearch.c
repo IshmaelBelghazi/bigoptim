@@ -32,7 +32,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                       SEXP covered, SEXP stepSizeType, SEXP family) {
   // Initializing protection counter
   int nprot = 0;
-
+  
   /*======\
   | Input |
   \======*/
@@ -46,7 +46,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                        .nVars = INTEGER(GET_DIM(Xt))[0],
                        .sparse = sparse,
                        .Li = REAL(stepSize)};
-
+  
   /* Initializing trainer  */
   GlmTrainer trainer = {.lambda = *REAL(lambda),                        
                         .d = REAL(d),
@@ -59,19 +59,28 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   
   /* Initializing Model */
   GlmModel model = {.w = REAL(w)};
+
   /* Choosing family */
   switch (*INTEGER(family)) {
     case GAUSSIAN:
-      model.grad = gaussian_grad;
       model.loss = gaussian_loss;
+      model.grad = gaussian_grad;
       break;
     case BINOMIAL:
-      model.grad = binomial_grad;
       model.loss = binomial_loss;
+      model.grad = binomial_grad;
+      break;
+    case EXPONENTIAL:
+      model.loss = exponential_loss;
+      model.grad = exponential_grad;
+      break;
+    case POISSON:
+      model.loss = poisson_loss;
+      model.grad = poisson_grad;
       break;
     default:
       error("Unrecognized glm family");
-          }
+  }
 
   
   
@@ -139,6 +148,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   Memcpy(REAL(w_return), model.w, train_set.nVars);
   SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
   Memcpy(REAL(d_return), trainer.d, train_set.nVars);
+  // TODO(Ishmael): check g dimesionality
   SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
   Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
   SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;

@@ -40,7 +40,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*======\
   | Input |
   \======*/
-  
+
   /* Initializing dataset */
   Dataset train_set = {.Xt = REAL(Xt),
                        .y = REAL(y),
@@ -59,24 +59,34 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .step = _sag_constant_iteration};
+
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.w = REAL(w)};
+
   /* Choosing family */
   switch (*INTEGER(family)) {
     case GAUSSIAN:
-      model.grad = gaussian_grad;
       model.loss = gaussian_loss;
+      model.grad = gaussian_grad;
       break;
     case BINOMIAL:
-      model.grad = binomial_grad;
       model.loss = binomial_loss;
+      model.grad = binomial_grad;
+      break;
+    case EXPONENTIAL:
+      model.loss = exponential_loss;
+      model.grad = exponential_grad;
+      break;
+    case POISSON:
+      model.loss = poisson_loss;
+      model.grad = poisson_grad;
       break;
     default:
       error("Unrecognized glm family");
-          }
+  }
 
-  /*===============\
+  /*===============                             \
   | Error Checking |
   \===============*/
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
@@ -98,7 +108,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   if (train_set.sparse && trainer.alpha * trainer.lambda == 1) {
     error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
-  
+
   /*==============================\
   | Stochastic Average Gradient   |
   \==============================*/
