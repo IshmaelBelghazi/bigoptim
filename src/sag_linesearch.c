@@ -12,7 +12,7 @@
 const static int one = 1;
 const static int sparse = 0;
 const static double precision = 1.490116119384765625e-8;
-const static double TOL = 0.01;
+
 /**
  *     Logistic regression stochastic average gradient trainer
  *    
@@ -31,10 +31,9 @@ const static double TOL = 0.01;
  */
 SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                       SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType, SEXP family) {
+                      SEXP covered, SEXP stepSizeType, SEXP family, SEXP tol) {
   // Initializing protection counter
   int nprot = 0;
-  
   /*======\
   | Input |
   \======*/
@@ -55,6 +54,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .g = REAL(g),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
+                        .tol = *REAL(tol),
                         .stepSizeType = *INTEGER(stepSizeType),
                         .precision = precision,
                         .step = _sag_linesearch_iteration};
@@ -140,13 +140,13 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* } */
 
   double d_norm = R_PosInf;
-  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL);
+  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
-    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL);
+    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
   }
   /* Freeing Allocated variables */
   /* Free(xtx); */

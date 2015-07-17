@@ -20,7 +20,7 @@
 sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
-                         d=NULL, g=NULL, covered=NULL, family=1) {
+                         d=NULL, g=NULL, covered=NULL, family=1, tol=1e-3) {
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
     }
@@ -50,7 +50,7 @@ sag_constant <- function(X, y, lambda=0,
     }
     ## Calling C function
     .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
-          as.integer(family)
+          as.integer(family), tol
           )
 }
 
@@ -60,7 +60,7 @@ sag_constant <- function(X, y, lambda=0,
 sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    stepSize=NULL, iVals=NULL,
                    d=NULL, g=NULL, covered=NULL,
-                   stepSizeType=1, family=1) {
+                   stepSizeType=1, family=1, tol=1e-3) {
     
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
@@ -91,7 +91,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
     }
     ## Calling C function
     .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
-          as.integer(stepSizeType), as.integer(family))
+          as.integer(stepSizeType), as.integer(family), tol)
     
 }
 ## * Sag with line-search and adaptive sampling
@@ -99,7 +99,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
 ##' @useDynLib  bigoptim C_sag_adaptive
 sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
                             Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
-                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1) {
+                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3) {
 
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
@@ -134,7 +134,7 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
     }
 
     .Call("C_sag_adaptive", wInit, t(X), y, lambda, Lmax, Li,
-          randVals, d, g, covered, increasing)
+          randVals, d, g, covered, increasing, tol)
 }
 
 ## Error Checking

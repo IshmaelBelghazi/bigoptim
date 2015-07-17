@@ -12,7 +12,6 @@
 /* Constant */
 const static int one = 1;
 const static int sparse = 0;
-const static double TOL = 0.01;
 
 /*============\
 | entry-point |
@@ -35,13 +34,14 @@ const static double TOL = 0.01;
 
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered, SEXP family) {
+                    SEXP covered, SEXP family, SEXP tol) {
   
   // Initializing garbage collection protection counter
   int nprot = 0;
   /*======\
   | Input |
   \======*/
+
 
   /* Initializing dataset */
   Dataset train_set = {.Xt = REAL(Xt),
@@ -52,7 +52,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                        .nSamples = INTEGER(GET_DIM(Xt))[1],
                        .nVars = INTEGER(GET_DIM(Xt))[0],
                        .sparse = sparse};
-
   /* Initializing Trainer */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .alpha = *REAL(stepSize),
@@ -60,6 +59,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .g = REAL(g),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
+                        .tol = *REAL(tol),
                         .step = _sag_constant_iteration};
 
   /* Initializing Model */
@@ -135,13 +135,14 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
 
 
   double d_norm = R_PosInf;
-  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL); 
+  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
+
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
-    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < TOL); 
+    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
   }
 
   /*=======\

@@ -37,7 +37,7 @@ const static double precision = 1.490116119384765625e-8;
  */
 SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
                     SEXP Li, SEXP randVals, SEXP d, SEXP g, SEXP covered,
-                    SEXP increasing) {
+                    SEXP increasing, SEXP tol) {
   // initializing protection counter
   int nprot = 0;
   /* Variables */
@@ -75,6 +75,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(randVals))[0],
                         .precision = precision,
+                        .tol = *REAL(tol),
                         .step = _sag_adaptive_iteration};
   
    /* Initializing Model */

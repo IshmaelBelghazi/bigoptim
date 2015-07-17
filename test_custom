@@ -1,9 +1,11 @@
 #!/usr/bin/env Rscript
-rm(list=ls())
+## -*- compile-command: "make test/custom" -*-
+##rm(list=ls())
+##gctorture(on = TRUE)
 ## * Package setup
 library(methods, quietly=TRUE)  ## hasArgs is not loaded by default by Rscript
 library(devtools, quietly=TRUE)
-pkg_path <-  "."
+pkg_path <-"."
 ##try(unload(pkg_path))
 document(pkg_path)
 load_all(pkg_path)
@@ -16,19 +18,20 @@ sample_size <- 1000
 sim <- .simulate_logistic(true_params=true_params,
                           sample_size=sample_size,
                           intercept=FALSE)
-maxiter = NULL
+maxiter <- NULL
+tol <- 1e-3
 ## Fitting with glm
 glm_fit <- glm.fit(sim$X, (sim$y + 1)/2, family=binomial())
 lambda <- 0
 sag_fit_constant <- sag_constant(X=sim$X,
                                  y=sim$y,
                                  maxiter=maxiter,
-                                 lambda=lambda, family=1)
+                                 lambda=lambda, family=1, tol=0.01)
 
 sag_fit_ls <- sag_ls(X=sim$X,
                      y=sim$y,
                      maxiter=maxiter,
-                     lambda=lambda, family=1)
+                     lambda=lambda, family=1, tol=0.01)
 
 print("True Parameters:")
 print(true_params)
