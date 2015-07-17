@@ -68,9 +68,9 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       model.loss = gaussian_loss;
       model.grad = gaussian_grad;
       break;
-    case BINOMIAL:
-      model.loss = binomial_loss;
-      model.grad = binomial_grad;
+    case BERNOULLI:
+      model.loss = bernoulli_loss;
+      model.grad = bernoulli_grad;
       break;
     case EXPONENTIAL:
       model.loss = exponential_loss;

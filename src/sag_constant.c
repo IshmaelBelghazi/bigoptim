@@ -42,7 +42,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   | Input |
   \======*/
 
-
   /* Initializing dataset */
   Dataset train_set = {.Xt = REAL(Xt),
                        .y = REAL(y),
@@ -72,9 +71,9 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       model.loss = gaussian_loss;
       model.grad = gaussian_grad;
       break;
-    case BINOMIAL:
-      model.loss = binomial_loss;
-      model.grad = binomial_grad;
+    case BERNOULLI:
+      model.loss = bernoulli_loss;
+      model.grad = bernoulli_grad;
       break;
     case EXPONENTIAL:
       model.loss = exponential_loss;
@@ -122,17 +121,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-
-  /* double d_norm = R_PosInf; */
-  /* for (trainer.iter = 0; trainer.iter < trainer.maxIter; trainer.iter++) { */
-  /*   // Runing Iteration */
-  /*   if (trainer.iter % 100 == 0) { */
-  /*     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one); */
-  /*     Rprintf("gradient norm %f \n", d_norm); */
-  /*   } */
-  /*   trainer.step(&trainer, &model, &train_set); */
-  /* } */
-
 
   double d_norm = R_PosInf;
   int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);

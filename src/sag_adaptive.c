@@ -54,8 +54,6 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   | Input |
   \======*/
 
-
-
   /* Initializing dataset */
   Dataset train_set = { .Xt = REAL(Xt),
                         .y = REAL(y),
@@ -79,7 +77,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
                         .step = _sag_adaptive_iteration};
   
    /* Initializing Model */
-   GlmModel model = {.w = REAL(w), .loss = binomial_loss, .grad = binomial_grad};
+   GlmModel model = {.w = REAL(w), .loss = bernoulli_loss, .grad = bernoulli_grad};
   
   /*Error Checking*/
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
