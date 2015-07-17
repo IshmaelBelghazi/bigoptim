@@ -1,14 +1,14 @@
 #include "glm_models.h"
 
-/*=========\
-| BINOMIAL |
-\=========*/
+/*===========\
+| BERNOUILLI |
+\===========*/
 /* loss function (not error function)*/
-double binomial_loss(double y, double innerProd) {
+double bernoulli_loss(double y, double innerProd) {
   return log(1 + exp(-y * innerProd));
 }
 /*Gradient of loss function*/
-double binomial_grad(double y, double innerProd) {
+double bernoulli_grad(double y, double innerProd) {
   return -y/(1 + exp(y * innerProd));
 }
 
@@ -25,7 +25,7 @@ double gaussian_grad(double y, double innerProd) {
 }
 
 /*============\
-| Exponential |
+| EXPONENTIAL |
 \============*/
 /* Exponential loss function */
 double exponential_loss(double y, double innerProd) {
@@ -37,7 +37,7 @@ double exponential_grad(double y, double innerProd) {
 }
 
 /*========\
-| Poisson |
+| POISSON |
 \========*/
 /* Poisson loss function */
 double poisson_loss(double y, double innerProd) {
