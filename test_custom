@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 ## -*- compile-command: "make test/custom" -*-
 ##rm(list=ls())
-##gctorture(on = TRUE)
 ## * Package setup
 library(methods, quietly=TRUE)  ## hasArgs is not loaded by default by Rscript
 library(devtools, quietly=TRUE)
@@ -15,33 +14,83 @@ load_all(pkg_path)
 
 true_params <- 1:3
 sample_size <- 1000
-sim <- .simulate_logistic(true_params=true_params,
-                          sample_size=sample_size,
-                          intercept=FALSE)
+## Setting simulation experiments functionals
+models <- list(gaussian=.simulate_gaussian,
+               bernoulli=.simulate_bernoulli,
+##               exponential=.simulate_exponential,
+               poisson=.simulate_poisson)
+family_id <- list(gaussian=0,
+                  bernoulli=1,
+                  exponential=2,
+                  poisson=3)
+
+simulations <- lapply(models, function(X) X(true_params=true_params,
+                                            sample_size=sample_size,
+                                            intercept=FALSE))
+## fitting
+glm_fit <- list()
+## gaussian
+glm_fit$gaussian <- glm.fit(simulations$gaussian$X, simulations$gaussian$y, family=gaussian())
+glm_fit$bernoulli <- glm.fit(simulations$bernoulli$X, (simulations$bernoulli$y + 1)/2, family=binomial())
+glm_fit$poisson <- glm.fit(simulations$poisson$X, simulations$poisson$y, family=poisson())
+glm_fit_hat <- sapply(glm_fit, coef)
 maxiter <- NULL
-tol <- 1e-3
+tol <- 0.01
 ## Fitting with glm
-glm_fit <- glm.fit(sim$X, (sim$y + 1)/2, family=binomial())
-lambda <- 0
-sag_fit_constant <- sag_constant(X=sim$X,
-                                 y=sim$y,
-                                 maxiter=maxiter,
-                                 lambda=lambda, family=1, tol=0.01)
+lambda <- 1/sample_size
 
-sag_fit_ls <- sag_ls(X=sim$X,
-                     y=sim$y,
-                     maxiter=maxiter,
-                     lambda=lambda, family=1, tol=0.01)
+## sag_fit_constant
+sag_constant_fits <- list()
+sag_ls_fits <- list()
+##gctorture(on = TRUE)
+for (sim in names(simulations)) {
+    print(paste("fitting:", sim, "model"))
+    print("SAG with constant step size fit")
+    sag_constant_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
+                                           y=simulations[[sim]]$y,
+                                           maxiter=maxiter,
+                                           lambda=lambda,
+                                           family=family_id[[sim]],
+                                           tol=tol)
+    print("SAG with lineseach fit")
+    sag_ls_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
+                                     y=simulations[[sim]]$y,
+                                     maxiter=maxiter,
+                                     lambda=lambda,
+                                     family=family_id[[sim]],
+                                     tol=tol)
+}
 
-print("True Parameters:")
-print(true_params)
-print("Estimated parameters glm:")
-print(coef(glm_fit))
-print("Estimated parameters (SAG constant):")
-print(sag_fit_constant$w)
-print("Approximate Gradient norm (SAG constant):")
-print(norm(sag_fit_constant$d, type="F"))
-print("Estimated parameters (SAG LineSearch):")
-print(sag_fit_ls$w)
-print("Approximate Gradient norm (SAG linesearch):")
-print(norm(sag_fit_ls$d, type="F"))
+## Getting estimates
+sag_constant_hat <- sapply(sag_constant_fits, function(X) X$w)
+sag_ls_hat <- sapply(sag_ls_fits, function(X) X$w)
+## Arraying parameters
+print("CONSTANT SAG")
+print("============")
+print(sag_constant_hat) 
+print("LINESEARCH SAG")
+print("============")
+print(sag_ls_hat)
+
+## sag_fit_constant <- sag_constant(X=sim$gaussian$X,
+##                                  y=sim$gaussian$y,
+##                                  maxiter=maxiter,
+##                                  lambda=lambda, family=0, tol=0.01)
+
+## sag_fit_ls <- sag_ls(X=sim$X,
+##                      y=sim$y,
+##                      maxiter=maxiter,
+##                      lambda=lambda, family=1, tol=0.01)
+
+## print("True Parameters:")
+## print(true_params)
+## print("Estimated parameters glm:")
+## print(coef(glm_fit))
+## print("Estimated parameters (SAG constant):")
+## print(sag_fit_constant$w)
+## print("Approximate Gradient norm (SAG constant):")
+## print(norm(sag_fit_constant$d, type="F"))
+## print("Estimated parameters (SAG LineSearch):")
+## print(sag_fit_ls$w)
+## print("Approximate Gradient norm (SAG linesearch):")
+## print(norm(sag_fit_ls$d, type="F"))
