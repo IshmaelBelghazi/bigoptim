@@ -35,8 +35,9 @@ sag_constant <- function(X, y, lambda=0,
         stepSize <- 1/Lmax
     }
     if (is.null(iVals)) {
-        iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
-        storage.mode(iVals) <- "integer"
+        iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
+        #iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
+        #iVals[] <- as.integer(iVals)
     }
     if (is.null(d)) {
         d <- matrix(0, nrow=NCOL(X), ncol=1)
@@ -45,8 +46,8 @@ sag_constant <- function(X, y, lambda=0,
         g <- matrix(0, nrow=NROW(X), ncol=1)
     }
     if (is.null(covered)) {
-        covered <- matrix(0, nrow=NROW(X), ncol=1)
-        storage.mode(covered) <- "integer"
+        covered <- matrix(0L, nrow=NROW(X), ncol=1)
+        ##covered[] <- as.integer(covered)
     }
     ## Calling C function
     .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
@@ -76,9 +77,11 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
         stepSize <- 1/Lmax
     }
     if (is.null(iVals)) {
-        iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
-        storage.mode(iVals) <- "integer"
+        iVals <- matrix(sample.int(NROW(X), size=maxiter, raplace=TRUE), nrow=maxiter, ncol=1)
+        ## iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
+        ## iVals[] <- as.integer(iVals)
     }
+
     if (is.null(d)) {
         d <- matrix(0, nrow=NCOL(X), ncol=1)
     }
@@ -86,8 +89,8 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
         g <- matrix(0, nrow=NROW(X), ncol=1)
     }
     if (is.null(covered)) {
-        covered <- matrix(0, nrow=NROW(X), ncol=1)
-        storage.mode(covered) <- "integer"
+        covered <- matrix(0L, nrow=NROW(X), ncol=1)
+        #covered[] <- as.integer(covered)
     }
     ## Calling C function
     .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
@@ -129,8 +132,8 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
         g <- matrix(0, nrow=NROW(X), ncol=1)
     }
     if (is.null(covered)) {
-        covered <- matrix(0, nrow=NROW(X), ncol=1)
-        storage.mode(covered) <- "integer"
+        covered <- matrix(0L, nrow=NROW(X), ncol=1)
+        #covered[] <- as.integer(covered)
     }
 
     .Call("C_sag_adaptive", wInit, t(X), y, lambda, Lmax, Li,
@@ -138,4 +141,5 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
 }
 
 ## Error Checking
+
 
