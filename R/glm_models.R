@@ -1,33 +1,23 @@
 ## * Generalized Linear Models R function 
-.make_glm_fun <- function(linkfun, ...) {
-
-    ## Negative log likelihood
-    cost <- function(X, y, weights, ...) {
-        
-    }
-    ## Gradient of negative log likelihood
-    grad <- function(X, y, weights, ...) {
-
-    }
-
-    return(list(cost=cost, grad=grad))
+## ** Gradient functions
+## *** Gaussian
+##' @export
+.gaussian_grad <- function(X, y, w) {
+  ((X %*% w) - y)/NROW(X) 
+}
+## *** Bernoulli
+##' @export
+.bernoulli_grad <- function(X, y, w) {
+  (-y/(1 + exp(y * (X %*% w))))/NROW(X)
 }
 
-
-.get_glm_condprob <- function(X, y, W,
-                              activation=function(x) x,
-                              log_prob=FALSE,
-                              ...) {
-    stop("not implemented yet")
+## *** Exponential
+##' @export
+.exponential_grad <- function(X, y, w) {
+  (-y * exp(y * (X %*% w)))/NROW(X)
 }
-## ** Cost functions (negative log-likelihood)
-.get_glm_cost <- function(X, y, W, activation=function(x) x, ...) {
-    stop("not implemented yet")
+## *** Poisson
+##' @export
+.poisson_grad <- function(X, y, w) {
+  (exp(X %*% w) - y)/NROW(X)
 }
-## ** cost function gradient
-.get_glm_grad <- function(X, y, W, activation=function(x) x, ...) {
-    stop("not implemented yet")
-}
-
-
-
