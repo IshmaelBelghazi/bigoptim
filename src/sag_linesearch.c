@@ -148,6 +148,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
     stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
   }
+  Rprintf("Total iteration: %d \n", trainer.iter);
   /* Freeing Allocated variables */
   /* Free(xtx); */
 

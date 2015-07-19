@@ -49,6 +49,16 @@ sag_constant <- function(X, y, lambda=0,
         covered <- matrix(0L, nrow=NROW(X), ncol=1)
         ##covered[] <- as.integer(covered)
     }
+    ## Variable Checks
+    print("iVals")
+    print("-----")
+    print(dim(iVals))
+    print(iVals[0])
+    readline()
+    print("Maxiter")
+    print("-------")
+    print(maxiter)
+    
     ## Calling C function
     .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
           as.integer(family), tol
@@ -65,7 +75,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
     
     if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
-    }
+   }
     if (is.null(maxiter)) {
         maxiter <- NROW(X) * 20
     }

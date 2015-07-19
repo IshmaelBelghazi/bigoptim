@@ -12,13 +12,23 @@ load_all(pkg_path)
 ## Sampling data
 ## Parameters
 
+
+
 true_params <- 1:3
-sample_size <- 1000
+sample_size <- 10000
 ## Setting simulation experiments functionals
-models <- list(gaussian=.simulate_gaussian,
-               bernoulli=.simulate_bernoulli,
+models <- list(
+                 gaussian=.simulate_gaussian,
+                 bernoulli=.simulate_bernoulli)
 ##               exponential=.simulate_exponential,
-               poisson=.simulate_poisson)
+##               poisson=.simulate_poisson)
+
+gradients <- list(gaussian=.gaussian_grad,
+                  bernoulli=.bernoulli_grad,
+                  exponential=.exponential_grad,
+                  poisson=.poisson_grad)
+
+
 family_id <- list(gaussian=0,
                   bernoulli=1,
                   exponential=2,
@@ -30,14 +40,14 @@ simulations <- lapply(models, function(X) X(true_params=true_params,
 ## fitting
 glm_fit <- list()
 ## gaussian
-glm_fit$gaussian <- glm.fit(simulations$gaussian$X, simulations$gaussian$y, family=gaussian())
+##glm_fit$gaussian <- glm.fit(simulations$gaussian$X, simulations$gaussian$y, family=gaussian())
 glm_fit$bernoulli <- glm.fit(simulations$bernoulli$X, (simulations$bernoulli$y + 1)/2, family=binomial())
-glm_fit$poisson <- glm.fit(simulations$poisson$X, simulations$poisson$y, family=poisson())
+##glm_fit$poisson <- glm.fit(simulations$poisson$X, simulations$poisson$y, family=poisson())
 glm_fit_hat <- sapply(glm_fit, coef)
-maxiter <- NULL
-tol <- 0.01
+maxiter <- sample_size * 2000
+tol <- 1e-8
 ## Fitting with glm
-lambda <- 0
+lambda <- 0 ##1/sample_size
 
 ## sag_fit_constant
 sag_constant_fits <- list()
@@ -63,14 +73,24 @@ for (sim in names(simulations)) {
 
 ## Getting estimates
 sag_constant_hat <- sapply(sag_constant_fits, function(X) X$w)
+sag_constant_d <- sapply(sag_constant_fits, function(X) X$d)
 sag_ls_hat <- sapply(sag_ls_fits, function(X) X$w)
+sag_ls_d <- sapply(sag_ls_fits, function(X) X$d)
 ## Arraying parameters
 print("CONSTANT SAG")
 print("============")
+print("Optimal weights")
 print(sag_constant_hat) 
+print("Approximate Gradient norm")
+print(norm(sag_constant_d, "F"))
 print("LINESEARCH SAG")
 print("============")
+print("Optimal weights")
 print(sag_ls_hat)
+print("Approximate Gradient norm")
+print(norm(sag_ls_d, "F"))
+
+
 
 ## sag_fit_constant <- sag_constant(X=sim$gaussian$X,
 ##                                  y=sim$gaussian$y,
