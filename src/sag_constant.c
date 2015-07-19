@@ -123,14 +123,14 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   }
 
   double d_norm = R_PosInf;
-  int stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
+  int stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
 
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
     d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
-    stop_condition = (trainer.iter > trainer.maxIter) || (d_norm < trainer.tol);
+    stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
   }
 
   /*=======\
