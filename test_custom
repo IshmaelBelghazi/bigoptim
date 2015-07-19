@@ -37,7 +37,7 @@ glm_fit_hat <- sapply(glm_fit, coef)
 maxiter <- NULL
 tol <- 0.01
 ## Fitting with glm
-lambda <- 1/sample_size
+lambda <- 0
 
 ## sag_fit_constant
 sag_constant_fits <- list()
