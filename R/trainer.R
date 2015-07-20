@@ -49,15 +49,6 @@ sag_constant <- function(X, y, lambda=0,
         covered <- matrix(0L, nrow=NROW(X), ncol=1)
         ##covered[] <- as.integer(covered)
     }
-    ## Variable Checks
-    print("iVals")
-    print("-----")
-    print(dim(iVals))
-    print(iVals[0])
-    readline()
-    print("Maxiter")
-    print("-------")
-    print(maxiter)
     
     ## Calling C function
     .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
@@ -87,7 +78,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
         stepSize <- 1/Lmax
     }
     if (is.null(iVals)) {
-        iVals <- matrix(sample.int(NROW(X), size=maxiter, raplace=TRUE), nrow=maxiter, ncol=1)
+        iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
         ## iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
         ## iVals[] <- as.integer(iVals)
     }
