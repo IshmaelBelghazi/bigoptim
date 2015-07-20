@@ -12,8 +12,6 @@ load_all(pkg_path)
 ## Sampling data
 ## Parameters
 
-
-
 true_params <- 1:3
 sample_size <- 10000
 ## Setting simulation experiments functionals
@@ -57,25 +55,41 @@ for (sim in names(simulations)) {
     print(paste("fitting:", sim, "model"))
     print("SAG with constant step size fit")
     sag_constant_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
-                                           y=simulations[[sim]]$y,
-                                           maxiter=maxiter,
-                                           lambda=lambda,
-                                           family=family_id[[sim]],
-                                           tol=tol)
+                                             y=simulations[[sim]]$y,
+                                             maxiter=maxiter,
+                                             lambda=lambda,
+                                             family=family_id[[sim]],
+                                             tol=tol)
     print("SAG with lineseach fit")
     sag_ls_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
-                                     y=simulations[[sim]]$y,
-                                     maxiter=maxiter,
-                                     lambda=lambda,
-                                     family=family_id[[sim]],
-                                     tol=tol)
+                                       y=simulations[[sim]]$y,
+                                       maxiter=maxiter,
+                                       lambda=lambda,
+                                       family=family_id[[sim]],
+                                       tol=tol)
 }
 
 ## Getting estimates
 sag_constant_hat <- sapply(sag_constant_fits, function(X) X$w)
 sag_constant_d <- sapply(sag_constant_fits, function(X) X$d)
+sag_constant_grad <- list()
+for (sim in names(simulations)) {
+  sag_constant_grad[[sim]] <- gradients[[sim]](simulations[[sim]]$X,
+    simulations[[sim]]$y,
+    sag_constant_hat[, sim])
+}
+sag_constant_grad_norm <- sapply(sag_constant_grad, function(X) norm(X, 'F'))
+
 sag_ls_hat <- sapply(sag_ls_fits, function(X) X$w)
 sag_ls_d <- sapply(sag_ls_fits, function(X) X$d)
+sag_ls_grad <- list()
+for (sim in names(simulations)) {
+  sag_ls_grad[[sim]] <- gradients[[sim]](simulations[[sim]]$X,
+    simulations[[sim]]$y,
+    sag_ls_hat[, sim])
+}
+sag_ls_grad_norm <- sapply(sag_ls_grad, function(X) norm(X, 'F'))
+
 ## Arraying parameters
 print("CONSTANT SAG")
 print("============")
@@ -83,34 +97,13 @@ print("Optimal weights")
 print(sag_constant_hat) 
 print("Approximate Gradient norm")
 print(norm(sag_constant_d, "F"))
+print("True Gradients Norm")
+print(sag_constant_grad_norm)
 print("LINESEARCH SAG")
 print("============")
 print("Optimal weights")
 print(sag_ls_hat)
 print("Approximate Gradient norm")
 print(norm(sag_ls_d, "F"))
-
-
-
-## sag_fit_constant <- sag_constant(X=sim$gaussian$X,
-##                                  y=sim$gaussian$y,
-##                                  maxiter=maxiter,
-##                                  lambda=lambda, family=0, tol=0.01)
-
-## sag_fit_ls <- sag_ls(X=sim$X,
-##                      y=sim$y,
-##                      maxiter=maxiter,
-##                      lambda=lambda, family=1, tol=0.01)
-
-## print("True Parameters:")
-## print(true_params)
-## print("Estimated parameters glm:")
-## print(coef(glm_fit))
-## print("Estimated parameters (SAG constant):")
-## print(sag_fit_constant$w)
-## print("Approximate Gradient norm (SAG constant):")
-## print(norm(sag_fit_constant$d, type="F"))
-## print("Estimated parameters (SAG LineSearch):")
-## print(sag_fit_ls$w)
-## print("Approximate Gradient norm (SAG linesearch):")
-## print(norm(sag_fit_ls$d, type="F"))
+print("True Gradient Norm")
+print(sag_ls_grad_norm)
