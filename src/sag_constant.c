@@ -55,6 +55,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
+                        .g_ssq = 0,
                         .g = REAL(g),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
@@ -122,14 +123,22 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
 
-  double d_norm = R_PosInf;
-  int stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
+  // Initializing gradient norm
+  trainer.g_ssq = F77_CALL(dnrm2)(&train_set.nSamples, trainer.g, &one);
+  trainer.g_ssq *= trainer.g_ssq;
+  double g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+  //int stop_condition = (trainer.iter >= trainer.maxIter) || (g_ssq <= trainer.tol);
+  int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
-    stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
+    g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+    stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
+  }
+
+  if (g_norm > trainer.tol) {
+    warning("(constant) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
   }
 
   /*=======\

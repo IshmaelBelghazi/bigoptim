@@ -15,7 +15,7 @@ const static double precision = 1.490116119384765625e-8;
 
 /**
  *     Logistic regression stochastic average gradient trainer
- *    
+ *
  *     @param w(p, 1) weights
  *     @param Xt(p, n) real feature matrix
  *     @param y(n, 1) {-1, 1} target matrix
@@ -49,9 +49,10 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                        .Li = REAL(stepSize)};
   
   /* Initializing trainer  */
-  GlmTrainer trainer = {.lambda = *REAL(lambda),                        
+  GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
                         .g = REAL(g),
+                        .g_ssq = 0,
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
@@ -139,18 +140,27 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*   trainer.step(&trainer, &model, &train_set); */
   /* } */
 
-  double d_norm = R_PosInf;
-  int stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
+  // double g_norm = R_PosInf;
+  trainer.g_ssq = F77_CALL(dnrm2)(&train_set.nSamples, trainer.g, &one);
+  trainer.g_ssq *= trainer.g_ssq;
+  double g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+  //int stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
+  int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    d_norm = F77_CALL(dnrm2)(&train_set.nVars, trainer.d, &one);
-    stop_condition = (trainer.iter >= trainer.maxIter) || (d_norm < trainer.tol);
+    g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+    stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
+    //stop_condition = g_norm <= trainer.tol;
   }
   //Rprintf("Total iteration: %d \n", trainer.iter);
   /* Freeing Allocated variables */
   /* Free(xtx); */
+  
+  if (g_norm > trainer.tol) {
+    warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
+  }
 
   /*=======\
   | Return |
