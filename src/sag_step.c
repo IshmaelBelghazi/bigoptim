@@ -45,9 +45,12 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
   }
-
+  /* Substracting former gradient from approximate gradient sums of squares*/
+  trainer->g_ssq -= g[i] * g[i];
   /* Store derivative of loss */
   g[i] = grad;
+  /* Updating approximate gradient norm*/
+  trainer->g_ssq += grad * grad;
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1;
@@ -108,8 +111,12 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
+  /* Substracting former gradient from approximate gradient sums of squares*/
+  trainer->g_ssq -= g[i] * g[i];
   /* Store Derivatives of loss */
   g[i] = grad;
+  /* Updating approximate gradient norm*/
+  trainer->g_ssq += grad * grad;
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1; dataset->nCovered++;
