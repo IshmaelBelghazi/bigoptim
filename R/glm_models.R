@@ -1,6 +1,7 @@
 ## * Generalized Linear Models R function 
 ## ** Gradient functions
 ## *** Gaussian
+## TODO(Ishmael): Add cost. gradient in math reform and reference
 ##' @export
 .gaussian_grad <- function(X, y, w, lambda=0) {
   (X %*% w - y) + lambda * sum(w) 
