@@ -55,7 +55,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
-                        .g_ssq = 0,
+                        .g_sum = 0,
                         .g = REAL(g),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
@@ -122,26 +122,34 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
+  /* Initializing gradients sum */
+  for (int i = 0; i < train_set.nSamples; i++) {
+    trainer.g_sum += trainer.g[i];
+  }
 
-  // Initializing gradient norm
-  trainer.g_ssq = F77_CALL(dnrm2)(&train_set.nSamples, trainer.g, &one);
-  trainer.g_ssq *= trainer.g_ssq;
-  double g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
-  //int stop_condition = (trainer.iter >= trainer.maxIter) || (g_ssq <= trainer.tol);
+  double g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
   int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+    g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
+    /* if (trainer.iter % 1000 == 0) { */
+    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, g_norm); */
+    /* } */
     stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
+    /* if (stop_condition) { */
+    /*   Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter); */
+    /* } */
   }
 
+  int convergence_code = 0;  // 0 -- converged.  1 -- did not converge.
   if (g_norm > trainer.tol) {
     warning("(constant) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
+    convergence_code = 1;
   }
 
-  /*=======\
+  /*=======\ 
   | Return |
   \=======*/
   /* Preparing return variables  */
@@ -153,14 +161,18 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
   SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
   Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
+  SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(convergence_code_return) = convergence_code;
+  SEXP iter_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(iter_return) = trainer.iter;
 
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return, iter_return); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
-  setAttrib(results, R_NamesSymbol, results_names);
+  SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter");
+  setAttrib(results, R_NamesSymbol, results_names); 
 
   UNPROTECT(nprot);
   return results;

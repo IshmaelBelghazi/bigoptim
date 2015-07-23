@@ -1,109 +1,66 @@
 #!/usr/bin/env Rscript
 ## -*- compile-command: "make test/custom" -*-
-##rm(list=ls())
+rm(list=ls())
 ## * Package setup
 library(methods, quietly=TRUE)  ## hasArgs is not loaded by default by Rscript
 library(devtools, quietly=TRUE)
+library(ggplot2)
+library(reshape2)
+suppressMessages(library(glmnet))
+
+grad_norm <- function(X, y, w, lambda) {
+  norm(.bernoulli_grad(X, y, w, lambda), 'F')
+}
+family <- 1  ## 1 for Bernoulli
+
 pkg_path <-"."
 ##try(unload(pkg_path))
+##gctorture(on=TRUE)
 document(pkg_path)
 load_all(pkg_path)
-## * Generating data
-## Sampling data
-## Parameters
-
-true_params <- 1:3
-sample_size <- 10000
-## Setting simulation experiments functionals
-models <- list(
-                 gaussian=.simulate_gaussian,
-                 bernoulli=.simulate_bernoulli)
-##               exponential=.simulate_exponential,
-##               poisson=.simulate_poisson)
-
-gradients <- list(gaussian=.gaussian_grad,
-                  bernoulli=.bernoulli_grad,
-                  exponential=.exponential_grad,
-                  poisson=.poisson_grad)
-
-
-family_id <- list(gaussian=0,
-                  bernoulli=1,
-                  exponential=2,
-                  poisson=3)
-
-simulations <- lapply(models, function(X) X(true_params=true_params,
-                                            sample_size=sample_size,
-                                            intercept=FALSE))
-## fitting
-glm_fit <- list()
-## gaussian
-##glm_fit$gaussian <- glm.fit(simulations$gaussian$X, simulations$gaussian$y, family=gaussian())
-glm_fit$bernoulli <- glm.fit(simulations$bernoulli$X, (simulations$bernoulli$y + 1)/2, family=binomial())
-##glm_fit$poisson <- glm.fit(simulations$poisson$X, simulations$poisson$y, family=poisson())
-glm_fit_hat <- sapply(glm_fit, coef)
-maxiter <- sample_size * 2000
-tol <- 1e-8
-## Fitting with glm
-lambda <- 0 ##1/sample_size
-
-## sag_fit_constant
-sag_constant_fits <- list()
-sag_ls_fits <- list()
-##gctorture(on = TRUE)
-for (sim in names(simulations)) {
-    print(paste("fitting:", sim, "model"))
-    print("SAG with constant step size fit")
-    sag_constant_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
-                                             y=simulations[[sim]]$y,
-                                             maxiter=maxiter,
-                                             lambda=lambda,
-                                             family=family_id[[sim]],
-                                             tol=tol)
-    print("SAG with lineseach fit")
-    sag_ls_fits[[sim]] <- sag_constant(X=simulations[[sim]]$X,
-                                       y=simulations[[sim]]$y,
-                                       maxiter=maxiter,
-                                       lambda=lambda,
-                                       family=family_id[[sim]],
-                                       tol=tol)
+##test(pkg_path)
+## Loading Data set
+data(covtype.libsvm)
+## Normalizing Columns and adding intercept
+X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))[1:3000, ]
+y <- covtype.libsvm$y[1:3000, , drop=FALSE]
+y[y == 2] <- -1
+n <- NROW(X)
+p <- NCOL(X)
+## Setting seed
+set.seed(0)
+## Setting up problem
+maxIter <- n * 10  ## 10 passes throught the dataset
+maxIters <- n * 1:10
+lambda <- 1/n 
+tols <- c(0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001)
+tols <- 0
+nlambda <- 5
+## Fitting grid with glmnet
+glmnet_fits <- glmnet(X, as.factor(y), family="binomial", alpha=0,
+                      nlambda=5, standardize=FALSE, intercept=FALSE)
+## Getting lambdas grid
+lambdas <- glmnet_fits$lambda
+results <- list()
+for( i in 1:lenght(lambdas)) {
+  lambda_i <- rev(lambdas)[i]
+  sag_fits_i <- lapply(maxIters, function(iter) sag_constant(X, y, lambda=lambda_i,
+                                                             maxiter=iter,
+                                                             family=family,
+                                                             tol=0))
+  sag_grad_norms_i <- sapply(sag_fits_i, function(sag_fit) grad_norm(X, y,
+                                                                     w=sag_fit$w,
+                                                                     lambda=lambda_i))
+  glmnet_w_i <- as.numeric(coef(glmnet_fits, s=lambda_i))[-1]
+  glmnet_norm_i <- grad_norm(X, y,
+                             glmnet_w_i,
+                             lambda_i)
+  results_i <- data.frame(iterations=maxIters,
+                          sag_grad_norms=sag_grad_norms_i,
+                          glmnet_norm=rep(glmnet_norm_i, length(maxIters)))
+  results[[paste0("lambda", lambda_i)]] <- results_i
 }
-
-## Getting estimates
-sag_constant_hat <- sapply(sag_constant_fits, function(X) X$w)
-sag_constant_d <- sapply(sag_constant_fits, function(X) X$d)
-sag_constant_grad <- list()
-for (sim in names(simulations)) {
-  sag_constant_grad[[sim]] <- gradients[[sim]](simulations[[sim]]$X,
-    simulations[[sim]]$y,
-    sag_constant_hat[, sim])
-}
-sag_constant_grad_norm <- sapply(sag_constant_grad, function(X) norm(X, 'F'))
-
-sag_ls_hat <- sapply(sag_ls_fits, function(X) X$w)
-sag_ls_d <- sapply(sag_ls_fits, function(X) X$d)
-sag_ls_grad <- list()
-for (sim in names(simulations)) {
-  sag_ls_grad[[sim]] <- gradients[[sim]](simulations[[sim]]$X,
-    simulations[[sim]]$y,
-    sag_ls_hat[, sim])
-}
-sag_ls_grad_norm <- sapply(sag_ls_grad, function(X) norm(X, 'F'))
-
-## Arraying parameters
-print("CONSTANT SAG")
-print("============")
-print("Optimal weights")
-print(sag_constant_hat) 
-print("Approximate Gradient norm")
-print(norm(sag_constant_d, "F"))
-print("True Gradients Norm")
-print(sag_constant_grad_norm)
-print("LINESEARCH SAG")
-print("============")
-print("Optimal weights")
-print(sag_ls_hat)
-print("Approximate Gradient norm")
-print(norm(sag_ls_d, "F"))
-print("True Gradient Norm")
-print(sag_ls_grad_norm)
+df <- cbind(rep(results_i[, 1], 2), stack(results_i[, -1]))
+names(df) <- c("iterations", "grad_norm", "fit")
+p <- ggplot(data=df, aes(x=iterations, y=grad_norm, colour=fit)) + geom_line()
+plot(p)

@@ -21,35 +21,43 @@ sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
                          d=NULL, g=NULL, covered=NULL, family=1, tol=1e-3) {
-    if (length(grep("CMatrix", class(X))) > 0) {
+
+  if (length(grep("CMatrix", class(X))) > 0) {
         stop("sparse matrices support not implemented yet.")
     }
-    if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 20
+
+  if (is.null(maxiter)) {
+        maxiter <- NROW(X) * 10
     }
-    if (is.null(wInit)) {
+
+  if (is.null(wInit)) {
         wInit <- matrix(0, nrow=NCOL(X), ncol=1)
     }
-    if (is.null(stepSize)) {
+
+  if (is.null(stepSize)) {
         Lmax <- 0.25 * max(rowSums(X^2)) + lambda
         stepSize <- 1/Lmax
     }
-    if (is.null(iVals)) {
+
+  if (is.null(iVals)) {
         iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
         #iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
         #iVals[] <- as.integer(iVals)
     }
-    if (is.null(d)) {
+
+  if (is.null(d)) {
         d <- matrix(0, nrow=NCOL(X), ncol=1)
     }
-    if (is.null(g)) {
+
+  if (is.null(g)) {
         g <- matrix(0, nrow=NROW(X), ncol=1)
     }
-    if (is.null(covered)) {
+
+  if (is.null(covered)) {
         covered <- matrix(0L, nrow=NROW(X), ncol=1)
         ##covered[] <- as.integer(covered)
-    }
-    
+  }
+
     ## Calling C function
     .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
           as.integer(family), tol
@@ -68,14 +76,13 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
         stop("sparse matrices support not implemented yet.")
    }
     if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 20
+        maxiter <- NROW(X) * 10
     }
     if (is.null(wInit)) {
         wInit <- matrix(0, nrow=NCOL(X), ncol=1)
     }
     if (is.null(stepSize)) {
-        Lmax <- 0.25 * max(rowSums(X^2)) + lambda
-        stepSize <- 1/Lmax
+      stepSize <- 1 
     }
     if (is.null(iVals)) {
         iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
@@ -117,7 +124,7 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
         Li <- matrix(1, nrow=NROW(X), ncol=1)
     }
     if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 20
+        maxiter <- NROW(X) * 10
     }
     if (is.null(randVals)) {
         randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)

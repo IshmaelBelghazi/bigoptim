@@ -1,5 +1,6 @@
 #include "glm_models.h"
-
+#include "R.h"
+const int one= 1;
 /*===========\
 | BERNOUILLI |
 \===========*/

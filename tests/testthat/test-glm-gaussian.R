@@ -31,8 +31,8 @@ data(covtype.libsvm)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 1e-4  ## Stop training when norm of approximate gradient is smaller than tol
-maxIter <- sample_size * 2000
+tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
+maxIter <- sample_size * 100
 lambda <- 1/sample_size
 ## ## A. Empirical Data tests
 ## ## Subsetting empirical data
@@ -61,6 +61,7 @@ lambda <- 1/sample_size
 ##                           empr_data$y,
 ##                           family="binomial",
 ##                           intercept=FALSE,
+##                           alpha=0,
 ##                           lambda=lambda)
 ## glmnet_empr_hat <- as.matrix(coef(glmnet_empr_fit))[-1, , drop=FALSE]
 ## colnames(glmnet_empr_hat) <- rownames(glmnet_empr_hat) <- NULL
@@ -98,56 +99,59 @@ lambda <- 1/sample_size
 ## Generating simulated data
 true_params <- c(1:3)
 sim_data <- .simulate_gaussian(true_params, sample_size=sample_size, intercept=FALSE)
+sim_data$X <- scale(sim_data$X)
 ## Fitting simulated data with SAG
 ## Constant SAG fit
 sag_sim_fits <- list()
 sag_sim_fits$constant <- sag_constant(sim_data$X,
-                                       sim_data$y,
-                                       lambda=lambda,
-                                       maxiter=maxIter,
-                                       tol=tol,
-                                       family=family)
+                                      sim_data$y,
+                                      lambda=lambda,
+                                      maxiter=maxIter,
+                                      tol=tol,
+                                      family=family)
 ## Linesearh SAG fit
 sag_sim_fits$linesearch <- sag_ls(sim_data$X,
-                                   sim_data$y,
-                                   lambda=lambda,
-                                   maxiter=maxIter,
-                                   tol=tol,
-                                   family=family)
+                                  sim_data$y,
+                                  lambda=lambda,
+                                  maxiter=maxIter,
+                                  tol=tol,
+                                  family=family)
 ## Glmnet empirical fit
 glmnet_sim_fit <- glmnet(sim_data$X,
-                          sim_data$y,
-                          family="gaussian",
-                          intercept=FALSE,
-                          lambda=lambda)
+                         sim_data$y,
+                         family="gaussian",
+                         standardize=FALSE,
+                         intercept=FALSE,
+                         alpha=0,
+                         lambda=lambda)
 glmnet_sim_hat <- as.matrix(coef(glmnet_sim_fit))[-1, , drop=FALSE]
 colnames(glmnet_sim_hat) <- rownames(glmnet_sim_hat) <- NULL
 ## A.1: Consistency with glmnet on empirical data
 glmnet_SAG_cst_diff_norm <- norm(sag_sim_fits$constant$w - glmnet_sim_hat, 'F') 
 glmnet_SAG_ls_diff_norm <- norm(sag_sim_fits$linesearch$w - glmnet_sim_hat, 'F')
-test_that("SAG and glmnet results are consistent on empirical data", {
+test_that("SAG and glmnet results are consistent on simulated data", {
   expect_less_than(glmnet_SAG_cst_diff_norm, eps)
   expect_less_than(glmnet_SAG_ls_diff_norm, eps)
 })
 ## A.2: Approximate gradient is small on simulated data
 approx_grad_norm_constant <- anorm(sag_sim_fits$constant$g)
-approx_grad_norm_ls <- anorm(sag_sim_fits$linesearch$g)  
-test_that("Approximate gradient is small on empirical data", {
-  expect_less_than(approx_grad_norm_constant, tol)
-  expect_less_than(approx_grad_norm_ls, tol)
+approx_grad_norm_ls <- anorm(sag_sim_fits$linesearch$g)
+test_that("Approximate gradient is small on simulated data", {
+  expect_less_than(approx_grad_norm_constant, eps)
+  expect_less_than(approx_grad_norm_ls, eps)
 })
 ## A.3: True gradient is small on simulated data
-sim_grad_constant <- .bernoulli_grad(sim_data$X,
-                                      sim_data$y,
-                                      sag_sim_fits$constant$w,
-                                      lambda=0)
+sim_grad_constant <- .gaussian_grad(sim_data$X,
+                                    sim_data$y,
+                                    sag_sim_fits$constant$w,
+                                    lambda=lambda)
 sim_grad_norm_constant <- anorm(sim_grad_constant)
-sim_grad_ls <- .bernoulli_grad(sim_data$X,
-                               sim_data$y,
-                               sag_sim_fits$linesearch$w,
-                               lambda=0)
+sim_grad_ls <- .gaussian_grad(sim_data$X,
+                              sim_data$y,
+                              sag_sim_fits$linesearch$w,
+                              lambda=lambda)
 sim_grad_norm_ls <- anorm(sim_grad_ls)
-test_that("True Gradient is small on empirical data", {
-  expect_less_than(sim_grad_norm_constant, 0.1)
-  expect_less_than(sim_grad_norm_ls, 0.1)
+test_that("True Gradient is small on simulated data", {
+  expect_less_than(sim_grad_norm_constant, eps)
+  expect_less_than(sim_grad_norm_ls, eps)
 })

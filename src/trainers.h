@@ -13,7 +13,7 @@ typedef struct GlmTrainer {
   double alpha;  // Constant step-size
   double * d;  // Initial Approximation of average Gradient
   double * g;  // Previous derivative of loss
-  double g_ssq;  // Sum of squares of approximate gradient
+  double g_sum;  // Sum of gradients
   int iter;  // Current Iteration count
   int maxIter;  // Maximum number of iterations
   int stepSizeType;  //  default is 1 to use 1/L, set to 2 to use 2(L

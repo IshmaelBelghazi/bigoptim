@@ -10,14 +10,14 @@ const static int sparse = 1;
 void _sag_constant_iteration(GlmTrainer * trainer,
                              GlmModel * model,
                              Dataset * dataset) {
-  
+
   int nVars = dataset->nVars;
   double * w = model->w;
   double * Xt = dataset->Xt;
   double * y = dataset->y;
   double * d = trainer->d;
   double * g = trainer->g;
-  
+
   /* Select next training example */
 
   //if(trainer->iter == 10) error("STOP!");  // Hammer time!
@@ -26,7 +26,7 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   if (dataset->sparse && trainer->iter > 0) {
     //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
   }
-    
+ 
   /* Compute derivative of loss */
   double innerProd = 0;
   if (dataset->sparse) {
@@ -46,11 +46,11 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
   }
   /* Substracting former gradient from approximate gradient sums of squares*/
-  trainer->g_ssq -= g[i] * g[i];
+  trainer->g_sum -= g[i];
   /* Store derivative of loss */
   g[i] = grad;
   /* Updating approximate gradient norm*/
-  trainer->g_ssq += grad * grad;
+  trainer->g_sum += grad;
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1;
@@ -102,7 +102,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   }
 
   double grad = model->grad(y[i], innerProd);
-  
+
   /* Update Direction */
   double scaling = 0;
   if (dataset->sparse) {
@@ -112,11 +112,11 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
   /* Substracting former gradient from approximate gradient sums of squares*/
-  trainer->g_ssq -= g[i] * g[i];
+  trainer->g_sum -= g[i];
   /* Store Derivatives of loss */
   g[i] = grad;
   /* Updating approximate gradient norm*/
-  trainer->g_ssq += grad * grad;
+  trainer->g_sum += grad;
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1; dataset->nCovered++;
@@ -124,25 +124,25 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
 
   /* Line-search for Li */
   double fi = model->loss(y[i], innerProd);
-  /* Compute f_new as the function value obtained by taking 
+  /* Compute f_new as the function value obtained by taking
    * a step size of 1/Li in the gradient direction */
   double wtx = innerProd;
   double xtx = F77_CALL(ddot)(&dataset->nVars, &Xt[i * dataset->nVars], &one, &Xt[i * dataset->nVars], &one);
   double gg = grad * grad * xtx;
   innerProd = wtx - xtx * grad/(*Li);
-  
+
   double fi_new = model->loss(y[i], innerProd);
   while (gg > trainer->precision && fi_new > fi - gg/(2 * (*Li))) {
     *Li *= 2;
     innerProd = wtx - xtx * grad/(*Li);
     fi_new = model->loss(y[i], innerProd);
   }
-    
+
   /* Compute step size */
   if (trainer->stepSizeType == 1) {
     trainer->alpha = 1/(*Li + trainer->lambda);
   } else {
-    trainer->alpha = 2/(*Li + (dataset->nSamples + 1) * trainer->lambda);       
+    trainer->alpha = 2/(*Li + (dataset->nSamples + 1) * trainer->lambda);
   }
   /* Update Parameters */
   if (dataset->sparse) {
@@ -183,7 +183,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
   int nSamples = dataset->nSamples;
   double precision = trainer->precision;
   int increasing = dataset->increasing;
-  
+
   double * randVals = dataset->randVals;
   int maxIter = trainer->maxIter;
   int k = trainer->iter;
@@ -196,7 +196,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
   double * unCoveredMatrix = dataset->unCoveredMatrix;
   double * LiMatrix = dataset->LiMatrix;
   double Lmean = dataset->Lmean;
-                     
+
   /* Select next training example */
   double offset = 0;
   int i = 0;
@@ -234,7 +234,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     }
     if(DEBUG) Rprintf("i = %d", i);
   }
-  
+
   /* Compute current values of needed parameters */
 
   if (sparse) {
@@ -248,9 +248,9 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
   } else {
     innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
   }
-    
+
   double grad = model->grad(y[i], innerProd);
-        
+
   /* Update direction */
   double scaling;
   if (sparse) {
@@ -259,7 +259,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
-    
+
   /* Store derivative of loss */
   g[i] = grad;
 
@@ -268,7 +268,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
   if(increasing && covered[i]) Li[i] /= 2;
   double fi = model->loss(y[i], innerProd);
 
-  /* Compute f_new as the function value obtained by taking 
+  /* Compute f_new as the function value obtained by taking
    * a step size of 1/Li in the gradient direction */
   double wtx = innerProd;
   double xtx = F77_CALL(ddot)(&nVars, &Xt[i * nVars], &one, &Xt[i * nVars], &one);
@@ -283,7 +283,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     }
     Li[i] *= 2;
     innerProd = wtx - xtx * grad/Li[i];
-    fi_new = model->loss(y[i], innerProd);            
+    fi_new = model->loss(y[i], innerProd);
   }
   if(Li[i] > *Lmax) *Lmax = Li[i];
 
@@ -294,7 +294,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     nCovered++;
     Lmean = Lmean *((double)(nCovered - 1)/(double)nCovered) +
             Li[i]/(double)nCovered;
-            
+
     /* Update unCoveredMatrix so we don't sample this guy when looking for a new guy */
     ind = i;
     for(int level = 0; level< nLevels; level++) {
@@ -338,7 +338,7 @@ void _sag_adaptive_iteration(GlmTrainer * trainer,
     scaling = -alpha/nCovered;
     F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
   }
-                
+
   /* Decrease value of max Lipschitz constant */
   if (increasing) {
     *Lmax *= pow(2.0, -1.0/nSamples);

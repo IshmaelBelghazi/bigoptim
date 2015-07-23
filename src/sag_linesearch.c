@@ -47,19 +47,19 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                        .nVars = INTEGER(GET_DIM(Xt))[0],
                        .sparse = sparse,
                        .Li = REAL(stepSize)};
-  
+
   /* Initializing trainer  */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .g_ssq = 0,
+                        .g_sum = 0,
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
                         .stepSizeType = *INTEGER(stepSizeType),
                         .precision = precision,
                         .step = _sag_linesearch_iteration};
-  
+
   /* Initializing Model */
   GlmModel model = {.w = REAL(w)};
 
@@ -85,8 +85,8 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       error("Unrecognized glm family");
   }
 
-  
-  
+
+
   // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
@@ -112,7 +112,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   }
   // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
   /* if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's */
-  /*       			       // code alpha is not declared yet. */
+  /*                   // code alpha is not declared yet. */
   /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
   /* } */
   /* Allocate Memory Needed for Lazy Update */
@@ -120,11 +120,11 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 82
   }
 
-  
+
   for(int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i]!=0) train_set.nCovered++;
   }
-  
+
   /* for (int i = 0; i < train_set.nSamples; i++) { */
   /*   if (sparse) { */
   /*     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103 */
@@ -141,25 +141,28 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* } */
 
   // double g_norm = R_PosInf;
-  trainer.g_ssq = F77_CALL(dnrm2)(&train_set.nSamples, trainer.g, &one);
-  trainer.g_ssq *= trainer.g_ssq;
-  double g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+  for (int i =0; i < train_set.nSamples; i++) {
+    trainer.g_sum += trainer.g[i];
+  }
+
+  double g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
   //int stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
   int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    g_norm = sqrt(trainer.g_ssq/(double)train_set.nSamples);
+    g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
     stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
     //stop_condition = g_norm <= trainer.tol;
   }
   //Rprintf("Total iteration: %d \n", trainer.iter);
   /* Freeing Allocated variables */
   /* Free(xtx); */
-  
+  int convergence_code = 0;
   if (g_norm > trainer.tol) {
     warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
+    convergence_code = 1;
   }
 
   /*=======\
@@ -175,16 +178,17 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
   SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
   Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
+  SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(convergence_code_return) = convergence_code;
 
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 5)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
+  SEXP results_names = PROTECT(allocVector(STRSXP, 5)); nprot++;
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);
   return results;
 }
-

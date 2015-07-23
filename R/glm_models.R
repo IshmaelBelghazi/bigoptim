@@ -3,22 +3,31 @@
 ## *** Gaussian
 ## TODO(Ishmael): Add cost. gradient in math reform and reference
 ##' @export
+.gaussian_loss <- function(X, y, w, lambda=0) {
+  innerProd <- X %*% w
+  losses <- 0.5 * (innerProd - y)^2
+  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
+}
+##' @export
 .gaussian_grad <- function(X, y, w, lambda=0) {
-  (X %*% w - y) + lambda * sum(w) 
+  grads <- diag(c(X %*% w - y)) %*% X 
+  matrix(colMeans(grads) + lambda * sum(w), ncol=1)
 }
 ## *** Bernoulli
 ##' @export
+.bernoulli_loss <- function(X, y, w, lambda=0) {
+  innerProd <- X  %*% w
+  losses <- log(1 + exp(-y * innerProd))
+  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
+  
+}
+##' @export
 .bernoulli_grad <- function(X, y, w, lambda=0) {
-  (-y/(1 + exp(y * (X %*% w)))) + lambda * sum(w)
+  grad <- matrix(0, nrow=NROW(w), ncol=1)
+  for (i in 1:NROW(X)) {
+    term <- -y[i]/(1 + exp(y[i] * (X[i, ] %*% w)))
+    grad <- grad + term * X[i, ]
+  }
+  grad/NROW(X) + lambda * w
 }
 
-## *** Exponential
-##' @export
-.exponential_grad <- function(X, y, w, lambda=0) {
-  (-y * exp(y * (X %*% w))) + lambda * sum(w)
-}
-## *** Poisson
-##' @export
-.poisson_grad <- function(X, y, w, lambda=0) {
-  (exp(X %*% w) - y) + lambda * sum(w)
-}
