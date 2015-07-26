@@ -14,6 +14,13 @@
   matrix(colMeans(grads) + lambda * sum(w), ncol=1)
 }
 ## *** Bernoulli
+## Reference Schmidt (2014) and Bishop (2006)
+## P(C_1|x) = \frac{1}{exp(-w^{t}x)}
+## D = {y_n, x_n}_{n=1}^{N} and y_{n} \in {-1, 1}
+## P(C_1|x) = P(y| x) = \frac{1}{exp(y w^{t}x)}
+## E = -LL = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
+## \nabla E = \frac{\sum_n=1^{N} \frac{-y_{n}x_{n}}{(1 + exp(y^{n}w^{t}x_{n}))}}{N} + \lambda W
+ 
 ##' @export
 .bernoulli_loss <- function(X, y, w, lambda=0) {
   innerProd <- X  %*% w
