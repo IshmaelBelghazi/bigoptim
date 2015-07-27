@@ -39,7 +39,7 @@ maxIter <- sample_size * 10
 lambda <- 1/sample_size
 ## A. Empirical Data tests
 ## Subsetting empirical data
-empr_data <- dataset 
+empr_data <- dataset
 
 ## Fitting empirical data with SAG
 ## Constant SAG fit
@@ -68,7 +68,7 @@ glmnet_empr_fit <- glmnet(empr_data$X,
 glmnet_empr_hat <- as.matrix(coef(glmnet_empr_fit))[-1, , drop=FALSE]
 colnames(glmnet_empr_hat) <- rownames(glmnet_empr_hat) <- NULL
 ## A.1: Consistency with glmnet on empirical data
-glmnet_SAG_cst_diff_norm <- norm(sag_empr_fits$constant$w - glmnet_empr_hat, 'F') 
+glmnet_SAG_cst_diff_norm <- norm(sag_empr_fits$constant$w - glmnet_empr_hat, 'F')
 glmnet_SAG_ls_diff_norm <- norm(sag_empr_fits$linesearch$w - glmnet_empr_hat, 'F')
 test_that("SAG and glmnet results are consistent on empirical data", {
   expect_less_than(glmnet_SAG_cst_diff_norm, eps)

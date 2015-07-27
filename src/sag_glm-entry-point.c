@@ -9,33 +9,31 @@
 #include "glm_models.h"
 #include "sag_step.h"
 
-/* Constant */
-const static int sparse = 0;
-
-SEXP C_sag_glm(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP stepSize, SEXP iVals, SEXP randVals,
-               SEXP d, SEXP g, SEXP covered, SEXP sag_type) {
-  
-  // Initializing garbage collection protection counter
+SEXP C_bernoulli_cost(SEXP Xt, SEXP y, SEXP w, SEXP lambda) {
+  // Initializing protection counter
   int nprot = 0;
-  
-  
-  Dataset train_set;
-  GlmTrainer trainer;
-  GlmModel model;
-  
-  /* Initializing trainer */
-  Sag_type type = *INTEGER(sag_type);
-  switch (type) {
-    case CONSTANT:
-      break;
-    case LINESEARCH:
-      break;
-    case ADAPTIVE:
-      break;
-    default:
-      error("Unrecognized algorithm");
-  }
+  int nSamples = INTEGER(GET_DIM(Xt))[1];
+  int nVars = INTEGER(GET_DIM(Xt))[0];
+  SEXP cost = PROTECT(allocVector(REALSXP, 1)); nprot++;
 
-  return NULL;
+  *REAL(cost) = bernoulli_cost(REAL(Xt), REAL(y), REAL(w), *REAL(lambda),
+                               nSamples, nVars);
+  UNPROTECT(nprot);
+  return cost;
+}
 
+SEXP C_bernoulli_cost_grad(SEXP Xt, SEXP y, SEXP w, SEXP lambda) {
+  // Initializing Protection counter
+  int nprot = 0;
+  int nSamples = INTEGER(GET_DIM(Xt))[1];
+  int nVars = INTEGER(GET_DIM(Xt))[0];
+  /* Allocating grad SEXP */
+  SEXP grad = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
+  memset(REAL(grad), 0.0, nVars * sizeof(double));
+  bernoulli_cost_grad(REAL(Xt), REAL(y), REAL(w), *REAL(lambda),
+                      nSamples, nVars,
+                      REAL(grad));
+
+  UNPROTECT(nprot);
+  return grad;
 }

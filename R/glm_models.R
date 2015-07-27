@@ -16,17 +16,25 @@
 ## *** Bernoulli
 ## Reference Schmidt (2014) and Bishop (2006)
 ## P(C_1|x) = \frac{1}{exp(-w^{t}x)}
-## D = {y_n, x_n}_{n=1}^{N} and y_{n} \in {-1, 1}
+## D = {y_n, x_n}_{n=1}^{N} where y_{n} \in {-1, 1}
 ## P(C_1|x) = P(y| x) = \frac{1}{exp(y w^{t}x)}
-## E = -LL = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
+## E = -LL + reg = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
 ## \nabla E = \frac{\sum_n=1^{N} \frac{-y_{n}x_{n}}{(1 + exp(y^{n}w^{t}x_{n}))}}{N} + \lambda W
- 
 ##' @export
 .bernoulli_loss <- function(X, y, w, lambda=0) {
   innerProd <- X  %*% w
   losses <- log(1 + exp(-y * innerProd))
-  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
-  
+  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
+}
+##' @export
+##' @useDynLib bigoptim C_bernoulli_cost
+.bernoulli_cost_C <- function(X, y, w, lambda=0) {
+  .Call("C_bernoulli_cost", t(X), y, w, lambda)
+}
+##' @export
+##' @useDynLib bigoptim C_bernoulli_cost_grad
+.bernoulli_cost_grad_C <- function(X, y, w, lambda=0) {
+  .Call("C_bernoulli_cost_grad", t(X), y, w, lambda)
 }
 ##' @export
 .bernoulli_grad <- function(X, y, w, lambda=0) {
