@@ -85,17 +85,101 @@ monitor_training <- function(X, y, lambda, iVals,
   return(training_table)
 }
 
-training_table <- monitor_training(X, y, lambda=lambda, iVals=iVals,
-                                   trainers_list=trainers,
-                                   grad_fun=.bernoulli_cost_grad_C,
-                                   cost_fun=.bernoulli_cost_C)
-training_table$fit_alg <- as.factor(training_table$fit_alg)
-## Plotting Tab graphs
-cost_graph <- ggplot(training_table,
-                     aes(x=iteration, y=cost, color=fit_alg)) +
-  geom_line()
+training_tables <- lapply(lambdas, function(lambda) monitor_training(X, y, lambda=lambda, iVals=iVals,
+                                                                     trainers_list=trainers,
+                                                                     grad_fun=.bernoulli_cost_grad_C,
+                                                                     cost_fun=.bernoulli_cost_C))
+names(training_tables) <- paste0("lambda_", lambdas)
+training_tables <- lapply(training_tables, function(training_table) {
+  training_table$fit_alg <- as.factor(training_table$fit_alg)
+  training_table
+})
 
-grad_norm_graph <- ggplot(training_table,
-                          aes(x=iteration, y=grad_norm, color=fit_alg)) +
-  geom_line()
+## Make training monitoring graphs
+make_training_graphs <- function(training_tables, log_iterations=FALSE) {
+  training_graphs <- list()
+  if (log_iterations) {
+    iter_title <- "training log iterations"
+    training_tables <- lapply(training_tables, function(table) {
+      table$iteration <- log(table$iteration) 
+    })
+  } else {
+    iter_title <- "training iterations"
+  }
+  for(table in names(training_tables)) {
+    training_table <- training_tables[[table]]
+    cost_graph <- ggplot(training_table, aes(x=iteration,
+                                             y=cost,
+                                             color=fit_alg)) +
+      geom_line() +
+      xlab(iter_title) +
+      ylab("Average l2 regularized Cost") +
+      ggtitle(paste("Cost vs", iter_title, table, sep=" "))
+    grad_norm_graph <- ggplot(training_table, aes(x=iteration,
+                                                  y=grad_norm,
+                                                  color=fit_alg)) +
+      geom_line() +
+      xlab(iter_title) +
+      ylab("Frobenius norm of average l2 regularized cost gradient ")+
+      ggtitle(paste0("Gradient norm vs", iter_title, table, sep=" "))
+    ## Assigning graph to list
+    training_graphs[[table]] <- list(cost=cost_graph,
+                                     grad=grad_norm_graph)
+  }
+  return(training_graphs)
+}
 
+training_graphs <- make_training_graphs(training_tables, log_iterations=TRUE)
+ 
+## Multiplot function
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+## Plotting cost graphs
+ncols <- ceiling(length(lambdas)/2)
+multiplot(plotlist=lapply(training_graphs, function(graph) graphs$cost), cols=ncols)
+## Plotting Gradient graphs
+multiplot(plotlist=lapply(training_graphs, function(graph) graph$grad), cols=ncols)
