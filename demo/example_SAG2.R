@@ -25,14 +25,12 @@ print(sprintf("Loss is: %f. Value in Mark's matlab code: 0.513607",
 print("Using C cost function")
 C_cost_const <-  .bernoulli_cost_C(X, y, w_constant, lambda=lambda)
 print(C_cost_const)
-print("Gradient norm using R")
 R_cost_grad_const <- .bernoulli_grad(X, y, w_constant, lambda=lambda)
 R_cost_grad_const_norm <- norm(R_cost_grad_const, 'F')
-print(R_cost_grad_const_norm)
-print("Gradient norm using C")
+print(sprintf("Gradient norm using R: %f. Value in Mark's matlab code: 0.001394", R_cost_grad_const_norm))
 C_cost_grad_const <- .bernoulli_cost_grad_C(X, y, w_constant, lambda=lambda)
 C_cost_grad_const_norm <- norm(C_cost_grad_const, 'F')
-print(R_cost_grad_const_norm)
+print(sprintf("Gradient norm using C: %f. Value in Mark's matlab code: 0.001394", C_cost_grad_const_norm))
 ## TEMPORARY -- END
 ## SAG with linesearch
 print("Running Stochastic Average Gradient with line-search")
