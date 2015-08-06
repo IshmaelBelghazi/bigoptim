@@ -20,48 +20,49 @@
 sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
-                         d=NULL, g=NULL, covered=NULL, family=1, tol=1e-3) {
+                         d=NULL, g=NULL, covered=NULL,
+                         family=1, tol=1e-3) {
 
   if (length(grep("CMatrix", class(X))) > 0) {
-        stop("sparse matrices support not implemented yet.")
-    }
+    stop("sparse matrices support not implemented yet.")
+  }
 
   if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 10
-    }
-
+    maxiter <- NROW(X) * 10
+  }
+  
   if (is.null(wInit)) {
-        wInit <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
+    wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+    ##wInit <- matrix(rnorm(NCOL(X), mean=0, sd=1), nrow=NCOL(X), ncol=1)
+  }
 
   if (is.null(stepSize)) {
-        Lmax <- 0.25 * max(rowSums(X^2)) + lambda
-        stepSize <- 1/Lmax
-    }
+    Lmax <- 0.25 * max(rowSums(X^2)) + lambda
+    stepSize <- 1/Lmax
+  }
 
   if (is.null(iVals)) {
-        iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
-        #iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
-        #iVals[] <- as.integer(iVals)
-    }
+    iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
+    ##iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
+    ##iVals[] <- as.integer(iVals)
+  }
 
   if (is.null(d)) {
-        d <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
+    d <- matrix(0, nrow=NCOL(X), ncol=1)
+  }
 
   if (is.null(g)) {
-        g <- matrix(0, nrow=NROW(X), ncol=1)
-    }
+    g <- matrix(0, nrow=NROW(X), ncol=1)
+  }
 
   if (is.null(covered)) {
-        covered <- matrix(0L, nrow=NROW(X), ncol=1)
-        ##covered[] <- as.integer(covered)
+    covered <- matrix(0L, nrow=NROW(X), ncol=1)
+    ##covered[] <- as.integer(covered)
   }
 
     ## Calling C function
-    .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
-          as.integer(family), tol
-          )
+  .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
+        as.integer(family), tol)
 }
 
 ## * Sag with Line-search
@@ -72,37 +73,37 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    d=NULL, g=NULL, covered=NULL,
                    stepSizeType=1, family=1, tol=1e-3) {
     
-    if (length(grep("CMatrix", class(X))) > 0) {
-        stop("sparse matrices support not implemented yet.")
-   }
-    if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 10
-    }
-    if (is.null(wInit)) {
-        wInit <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
-    if (is.null(stepSize)) {
-      stepSize <- 1 
-    }
-    if (is.null(iVals)) {
-        iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
-        ## iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
-        ## iVals[] <- as.integer(iVals)
-    }
+  if (length(grep("CMatrix", class(X))) > 0) {
+    stop("sparse matrices support not implemented yet.")
+  }
+  if (is.null(maxiter)) {
+    maxiter <- NROW(X) * 10
+  }
+  if (is.null(wInit)) {
+    wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+  }
+  if (is.null(stepSize)) {
+    stepSize <- 1 
+  }
+  if (is.null(iVals)) {
+    iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
+    ## iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
+    ## iVals[] <- as.integer(iVals)
+  }
 
-    if (is.null(d)) {
-        d <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
-    if (is.null(g)) {
-        g <- matrix(0, nrow=NROW(X), ncol=1)
-    }
-    if (is.null(covered)) {
-        covered <- matrix(0L, nrow=NROW(X), ncol=1)
-        #covered[] <- as.integer(covered)
-    }
-    ## Calling C function
-    .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
-          as.integer(stepSizeType), as.integer(family), tol)
+  if (is.null(d)) {
+    d <- matrix(0, nrow=NCOL(X), ncol=1)
+  }
+  if (is.null(g)) {
+    g <- matrix(0, nrow=NROW(X), ncol=1)
+  }
+  if (is.null(covered)) {
+    covered <- matrix(0L, nrow=NROW(X), ncol=1)
+                                        #covered[] <- as.integer(covered)
+  }
+  ## Calling C function
+  .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
+        as.integer(stepSizeType), as.integer(family), tol)
     
 }
 ## * Sag with line-search and adaptive sampling
@@ -113,35 +114,34 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
                             d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3) {
 
     if (length(grep("CMatrix", class(X))) > 0) {
-        stop("sparse matrices support not implemented yet.")
+      stop("sparse matrices support not implemented yet.")
     }
     if (is.null(Li)) {
-        ## Initial guess of overall Lipschitz Constant
-        Lmax <- 1
+      ## Initial guess of overall Lipschitz Constant
+      Lmax <- 1
     }
     if (is.null(Li)) {
-        ## Initial guess of Lipschitz constant of each function
-        Li <- matrix(1, nrow=NROW(X), ncol=1)
+      ## Initial guess of Lipschitz constant of each function
+      Li <- matrix(1, nrow=NROW(X), ncol=1)
     }
     if (is.null(maxiter)) {
-        maxiter <- NROW(X) * 10
+      maxiter <- NROW(X) * 10
     }
     if (is.null(randVals)) {
-        randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
+      randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
     }
-    
     if (is.null(wInit)) {
-        wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+      wInit <- matrix(0, nrow=NCOL(X), ncol=1)
     }
     if (is.null(d)) {
-        d <- matrix(0, nrow=NCOL(X), ncol=1)
+      d <- matrix(0, nrow=NCOL(X), ncol=1)
     }
     if (is.null(g)) {
-        g <- matrix(0, nrow=NROW(X), ncol=1)
+      g <- matrix(0, nrow=NROW(X), ncol=1)
     }
     if (is.null(covered)) {
-        covered <- matrix(0L, nrow=NROW(X), ncol=1)
-        #covered[] <- as.integer(covered)
+      covered <- matrix(0L, nrow=NROW(X), ncol=1)
+      ##covered[] <- as.integer(covered)
     }
 
     .Call("C_sag_adaptive", wInit, t(X), y, lambda, Lmax, Li,
@@ -149,5 +149,3 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
 }
 
 ## Error Checking
-
-

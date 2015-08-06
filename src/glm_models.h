@@ -27,7 +27,6 @@ double bernoulli_cost(double * Xt, double * y, double * w,
                       double lambda, int nSamples, int nVars);
 void bernoulli_cost_grad(double * Xt, double * y, double * w, double lambda,
                          const int nSamples, const int nVars, double * grad);
-
 /*  Exponential */
 double exponential_loss(double y, double innerProd);
 double exponential_grad(double y, double innerProd);

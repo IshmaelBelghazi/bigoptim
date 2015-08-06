@@ -35,7 +35,7 @@ const static int sparse = 0;
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
                     SEXP covered, SEXP family, SEXP tol) {
-  
+
   // Initializing garbage collection protection counter
   int nprot = 0;
   /*======\
@@ -55,8 +55,8 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
-                        .g_sum = 0,
                         .g = REAL(g),
+                        .g_sum = Calloc(train_set.nVars, double),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
@@ -124,32 +124,40 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   }
   /* Initializing gradients sum */
   for (int i = 0; i < train_set.nSamples; i++) {
-    trainer.g_sum += trainer.g[i];
+    F77_CALL(daxpy)(&train_set.nVars, &trainer.g[i], &train_set.Xt[train_set.nVars * i], &one, trainer.g_sum, &one);
   }
+  /* Initializing cost gradient norm */
 
-  double g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
+  /* Rprintf("Initial trainer cost gradient\n"); */
+  /* Rprintf("=============================\n"); */
+  /* for(int i = 0; i < train_set.nVars; i++) { */
+  /*   Rprintf("\t%4.6f\n", trainer.g_sum[i]); *
+  /* } */
+  /* Rprintf("=============================\n"); */
+  //*(trainer.g_sum) /= (double)train_set.nSamples;
+  double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
+  /* Rprintf("initial cost grad norm %4.6f\n", cost_grad_norm); */
   int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
+    cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
     /* if (trainer.iter % 1000 == 0) { */
-    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, g_norm); */
+    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm); */
     /* } */
-    stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
-    /* if (stop_condition) { */
-    /*   Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter); */
-    /* } */
+    stop_condition = (trainer.iter >= trainer.maxIter) || (cost_grad_norm <= trainer.tol);
+    if (stop_condition) {
+      Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter);
+    }
   }
-
   int convergence_code = 0;  // 0 -- converged.  1 -- did not converge.
-  if (g_norm > trainer.tol) {
+  if (cost_grad_norm > trainer.tol) {
     warning("(constant) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
     convergence_code = 1;
   }
 
-  /*=======\ 
+  /*=======\
   | Return |
   \=======*/
   /* Preparing return variables  */
@@ -172,8 +180,9 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter");
-  setAttrib(results, R_NamesSymbol, results_names); 
-
+  setAttrib(results, R_NamesSymbol, results_names);
+  /* Freeing dynamically allocated memory */
+  Free(trainer.g_sum);
   UNPROTECT(nprot);
   return results;
 }

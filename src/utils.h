@@ -1,5 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
+#include "trainers.h"
+#include "glm_models.h"
+#include "dataset.h"
 
 /* Macros */
 /* Apply like Macro */
@@ -18,7 +21,7 @@
       action(subject, i, list[i]);                     \
     }                                                  \
   }                                                    \
-  
+
 /* Incremental apply like Macro with preprocessing on list elements */
 #define INC_APPLY_SUB(type, action, subaction, subject, ...) {   \
     type * list = (type []){__VA_ARGS__, NULL};                  \
@@ -30,5 +33,5 @@
 /* Prototypes */
 double _log_sum_exp(const double * restrict array, const int ar_size);
 double log2(double x);
-
+double get_cost_grad_norm(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
 #endif /* UTILS_H */

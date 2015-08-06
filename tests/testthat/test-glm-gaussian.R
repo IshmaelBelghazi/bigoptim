@@ -4,17 +4,15 @@ context("GLM -- GAUSSIAN")
 #####################################################
 ## A Empirical Data                                 #
 #####################################################
-## A.1 - Consitency with glmnet on empirical data.  # 
-## A.2 - approximate gradient is small on           # 
+## A.1 - approximate gradient is small on           # 
 ##       empirical data.                            #
-## A.3 - Real Gradient is small on empirical data.  #
+## A.2 - Real Gradient is small on empirical data.  #
 #####################################################
 ## B Simulated Data                                 #
 #####################################################
-## B.1 - Consitency with glmnet on simulated data.  # 
-## B.2- approximate gradient is small on            #
+## B.1- approximate gradient is small on            #
 ##       simulated data.                            #
-## B.3 - Real Gradient is small on simulated data.  #
+## B.2 - Real Gradient is small on simulated data.  #
 #####################################################
 anorm <- function(x) norm(x, 'F')/NROW(x)
 ######################
@@ -116,31 +114,14 @@ sag_sim_fits$linesearch <- sag_ls(sim_data$X,
                                   maxiter=maxIter,
                                   tol=tol,
                                   family=family)
-## Glmnet empirical fit
-glmnet_sim_fit <- glmnet(sim_data$X,
-                         sim_data$y,
-                         family="gaussian",
-                         standardize=FALSE,
-                         intercept=FALSE,
-                         alpha=0,
-                         lambda=lambda)
-glmnet_sim_hat <- as.matrix(coef(glmnet_sim_fit))[-1, , drop=FALSE]
-colnames(glmnet_sim_hat) <- rownames(glmnet_sim_hat) <- NULL
-## A.1: Consistency with glmnet on empirical data
-glmnet_SAG_cst_diff_norm <- norm(sag_sim_fits$constant$w - glmnet_sim_hat, 'F') 
-glmnet_SAG_ls_diff_norm <- norm(sag_sim_fits$linesearch$w - glmnet_sim_hat, 'F')
-test_that("SAG and glmnet results are consistent on simulated data", {
-  expect_less_than(glmnet_SAG_cst_diff_norm, eps)
-  expect_less_than(glmnet_SAG_ls_diff_norm, eps)
-})
-## A.2: Approximate gradient is small on simulated data
+## A.1: Approximate gradient is small on simulated data
 approx_grad_norm_constant <- anorm(sag_sim_fits$constant$g)
 approx_grad_norm_ls <- anorm(sag_sim_fits$linesearch$g)
 test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm_constant, eps)
   expect_less_than(approx_grad_norm_ls, eps)
 })
-## A.3: True gradient is small on simulated data
+## A.2: True gradient is small on simulated data
 sim_grad_constant <- .gaussian_grad(sim_data$X,
                                     sim_data$y,
                                     sag_sim_fits$constant$w,

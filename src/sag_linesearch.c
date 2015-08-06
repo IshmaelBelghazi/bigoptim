@@ -52,7 +52,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .g_sum = 0,
+                        .g_sum = Calloc(train_set.nVars, double),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
@@ -85,8 +85,6 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       error("Unrecognized glm family");
   }
 
-
-
   // Mark deals with stepSizeType and xtx as optional arguments. This
   // makes sense in MATLAB. In R it is simpler to pass the default
   // argument in R when using .Call rather than use .Extern
@@ -108,7 +106,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     error("w and g must have the same number of rows");
   }
   if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
-    error("covered and y must hvae the same number of rows");
+    error("covered and y must have the same number of rows");
   }
   // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
   /* if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's */
@@ -119,7 +117,6 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   if (sparse) {
     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 82
   }
-
 
   for(int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i]!=0) train_set.nCovered++;
@@ -140,27 +137,36 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*   trainer.step(&trainer, &model, &train_set); */
   /* } */
 
-  // double g_norm = R_PosInf;
-  for (int i =0; i < train_set.nSamples; i++) {
-    trainer.g_sum += trainer.g[i];
+  /* Allocate Memory Needed for lazy update */
+  if (sparse) {
+  // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
   }
-
-  double g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
-  //int stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
+  /* Counting*/
+  for (int i = 0; i < train_set.nSamples; i++) {
+    if (train_set.covered[i] != 0) train_set.nCovered++;
+  }
+  /* Initializing gradients sum */
+  for (int i = 0; i < train_set.nSamples; i++) {
+    F77_CALL(daxpy)(&train_set.nVars, &trainer.g[i], &train_set.Xt[train_set.nVars * i], &one, trainer.g_sum, &one);
+  }
+  //*(trainer.g_sum) /= (double)train_set.nSamples;
+  double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
   int stop_condition = 0;
   while (!stop_condition) {
     trainer.step(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
-    g_norm = fabs(trainer.g_sum/(double)train_set.nSamples);
-    stop_condition = (trainer.iter >= trainer.maxIter) || (g_norm <= trainer.tol);
-    //stop_condition = g_norm <= trainer.tol;
+    cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
+    if (trainer.iter % 1000 == 0) {
+      Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm);
+    }
+    stop_condition = (trainer.iter >= trainer.maxIter) || (cost_grad_norm <= trainer.tol);
+    if (stop_condition) {
+      Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter);
+    }
   }
-  //Rprintf("Total iteration: %d \n", trainer.iter);
-  /* Freeing Allocated variables */
-  /* Free(xtx); */
   int convergence_code = 0;
-  if (g_norm > trainer.tol) {
+  if (cost_grad_norm > trainer.tol) {
     warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
     convergence_code = 1;
   }
@@ -188,6 +194,8 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   SEXP results_names = PROTECT(allocVector(STRSXP, 5)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code");
   setAttrib(results, R_NamesSymbol, results_names);
+  /* Freeing Dynamically Allocated Memory */
+  Free(trainer.g_sum);
 
   UNPROTECT(nprot);
   return results;

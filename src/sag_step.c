@@ -17,6 +17,7 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   double * y = dataset->y;
   double * d = trainer->d;
   double * g = trainer->g;
+  double * g_sum = trainer->g_sum;
 
   /* Select next training example */
 
@@ -26,7 +27,7 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   if (dataset->sparse && trainer->iter > 0) {
     //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
   }
- 
+
   /* Compute derivative of loss */
   double innerProd = 0;
   if (dataset->sparse) {
@@ -45,12 +46,13 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
   }
-  /* Substracting former gradient from approximate gradient sums of squares*/
-  trainer->g_sum -= g[i];
+  /* Substracting former gradient from approximate gradient run*/
+  double grad_scale = -1 * g[i];
+  F77_CALL(daxpy)(&nVars, &grad_scale, &Xt[nVars * i], &one, g_sum, &one);
   /* Store derivative of loss */
   g[i] = grad;
-  /* Updating approximate gradient norm*/
-  trainer->g_sum += grad;
+  /* Updating approximate gradient cost gradient running sum*/
+  F77_CALL(daxpy)(&nVars, &g[i], &Xt[nVars * i], &one, g_sum, &one);
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1;
@@ -87,7 +89,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   double * d = trainer->d;
   double * g = trainer->g;
   double * Li = dataset-> Li;
-  
+
   /* Select next training example */
   int i = dataset->iVals[trainer->iter] - 1;
   if (dataset->sparse && trainer->iter > 0) {
@@ -111,12 +113,13 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
-  /* Substracting former gradient from approximate gradient sums of squares*/
-  trainer->g_sum -= g[i];
-  /* Store Derivatives of loss */
+  /* Substracting former gradient from approximate gradient run*/
+  double grad_scale = -1 * g[i];
+  F77_CALL(daxpy)(&nVars, &grad_scale, &Xt[i * nVars], &one, trainer->g_sum, &one);
+  /* Store derivative of loss */
   g[i] = grad;
-  /* Updating approximate gradient norm*/
-  trainer->g_sum += grad;
+  /* Updating approximate gradient cost gradient running sum*/
+  F77_CALL(daxpy)(&nVars, &g[i], &Xt[i * nVars], &one, trainer->g_sum, &one);
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1; dataset->nCovered++;

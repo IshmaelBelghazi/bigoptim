@@ -9,11 +9,11 @@
 
 /* Trainer structs */
 typedef struct GlmTrainer {
-  double lambda; // scalar regularization parameter
+  double lambda;  // scalar regularization parameter
   double alpha;  // Constant step-size
   double * d;  // Initial Approximation of average Gradient
   double * g;  // Previous derivative of loss
-  double g_sum;  // Sum of gradients
+  double * g_sum; // Sum of gradients
   int iter;  // Current Iteration count
   int maxIter;  // Maximum number of iterations
   int stepSizeType;  //  default is 1 to use 1/L, set to 2 to use 2(L
@@ -21,7 +21,7 @@ typedef struct GlmTrainer {
   double precision;
   double tol;  // Tolerance
   /* Performs a single step of the attached SAG algorithm */
-  void (*step)(struct GlmTrainer *, GlmModel *, Dataset *); 
+  void (*step)(struct GlmTrainer *, GlmModel *, Dataset *);
 } GlmTrainer;
 
 /* trainer type enum */
