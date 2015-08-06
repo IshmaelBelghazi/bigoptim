@@ -52,7 +52,6 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .g_sum = Calloc(train_set.nVars, double),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
@@ -145,11 +144,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-  /* Initializing gradients sum */
-  for (int i = 0; i < train_set.nSamples; i++) {
-    F77_CALL(daxpy)(&train_set.nVars, &trainer.g[i], &train_set.Xt[train_set.nVars * i], &one, trainer.g_sum, &one);
-  }
-  //*(trainer.g_sum) /= (double)train_set.nSamples;
+
   double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
   int stop_condition = 0;
   while (!stop_condition) {
@@ -157,9 +152,9 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
     cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
-    if (trainer.iter % 1000 == 0) {
-      Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm);
-    }
+    /* if (trainer.iter % 1000 == 0) { */
+    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm); */
+    /* } */
     stop_condition = (trainer.iter >= trainer.maxIter) || (cost_grad_norm <= trainer.tol);
     if (stop_condition) {
       Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter);
@@ -194,8 +189,6 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   SEXP results_names = PROTECT(allocVector(STRSXP, 5)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code");
   setAttrib(results, R_NamesSymbol, results_names);
-  /* Freeing Dynamically Allocated Memory */
-  Free(trainer.g_sum);
 
   UNPROTECT(nprot);
   return results;

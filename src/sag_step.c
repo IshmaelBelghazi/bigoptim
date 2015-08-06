@@ -17,7 +17,6 @@ void _sag_constant_iteration(GlmTrainer * trainer,
   double * y = dataset->y;
   double * d = trainer->d;
   double * g = trainer->g;
-  double * g_sum = trainer->g_sum;
 
   /* Select next training example */
 
@@ -46,13 +45,8 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
   }
-  /* Substracting former gradient from approximate gradient run*/
-  double grad_scale = -1 * g[i];
-  F77_CALL(daxpy)(&nVars, &grad_scale, &Xt[nVars * i], &one, g_sum, &one);
   /* Store derivative of loss */
   g[i] = grad;
-  /* Updating approximate gradient cost gradient running sum*/
-  F77_CALL(daxpy)(&nVars, &g[i], &Xt[nVars * i], &one, g_sum, &one);
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1;
@@ -113,13 +107,8 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
   }
-  /* Substracting former gradient from approximate gradient run*/
-  double grad_scale = -1 * g[i];
-  F77_CALL(daxpy)(&nVars, &grad_scale, &Xt[i * nVars], &one, trainer->g_sum, &one);
   /* Store derivative of loss */
   g[i] = grad;
-  /* Updating approximate gradient cost gradient running sum*/
-  F77_CALL(daxpy)(&nVars, &g[i], &Xt[i * nVars], &one, trainer->g_sum, &one);
   /* Update the number of examples that we have seen */
   if (dataset->covered[i] == 0) {
     dataset->covered[i] = 1; dataset->nCovered++;

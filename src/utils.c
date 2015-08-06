@@ -41,12 +41,11 @@ double log2(double x) {
 }
 /* compute gradient norm */
 double get_cost_grad_norm(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
-  double N = (double)dataset->nCovered;
   double cost_grad_norm = 0;
   for(int i = 0; i < dataset->nVars; i++) {
-    cost_grad_norm += pow(trainer->g_sum[i] + N * trainer->lambda * model->w[i], 2.0);
+    cost_grad_norm += pow(trainer->d[i] + dataset->nCovered * trainer->lambda * model->w[i], 2.0);
   }
-  return sqrt(cost_grad_norm)/N;
+  return sqrt(cost_grad_norm)/dataset->nCovered;
 
 
 }

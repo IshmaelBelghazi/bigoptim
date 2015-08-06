@@ -56,7 +56,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .g_sum = Calloc(train_set.nVars, double),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
@@ -122,19 +121,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-  /* Initializing gradients sum */
-  for (int i = 0; i < train_set.nSamples; i++) {
-    F77_CALL(daxpy)(&train_set.nVars, &trainer.g[i], &train_set.Xt[train_set.nVars * i], &one, trainer.g_sum, &one);
-  }
-  /* Initializing cost gradient norm */
 
-  /* Rprintf("Initial trainer cost gradient\n"); */
-  /* Rprintf("=============================\n"); */
-  /* for(int i = 0; i < train_set.nVars; i++) { */
-  /*   Rprintf("\t%4.6f\n", trainer.g_sum[i]); *
-  /* } */
-  /* Rprintf("=============================\n"); */
-  //*(trainer.g_sum) /= (double)train_set.nSamples;
   double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
   /* Rprintf("initial cost grad norm %4.6f\n", cost_grad_norm); */
   int stop_condition = 0;
@@ -181,8 +168,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter");
   setAttrib(results, R_NamesSymbol, results_names);
-  /* Freeing dynamically allocated memory */
-  Free(trainer.g_sum);
+  
   UNPROTECT(nprot);
   return results;
 }
