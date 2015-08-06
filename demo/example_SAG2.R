@@ -11,7 +11,7 @@ p <- NCOL(X)
 set.seed(0)
 ## Setting up problem
 maxiter <- n * 10  ## 10 passes throught the dataset
-lambda <- 1/n
+lambda <- 1/n 
 tol <- 0
 ## SAG with Constant step size
 print("Running Stochastic Average Gradient with constant step size")

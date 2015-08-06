@@ -62,12 +62,10 @@ void _sag_constant_iteration(GlmTrainer * trainer,
     scaling = -trainer->alpha/dataset->nCovered;
     F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
   }
-
 }
   /* if (sparse) { */
   /*   // TODO(Ishmael): Line 153 in SAG_logistic_BLAS */
   /* } */
-
 
 /*====================\
 | SAG with linesearch |
@@ -124,7 +122,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   innerProd = wtx - xtx * grad/(*Li);
 
   double fi_new = model->loss(y[i], innerProd);
-  while (gg > trainer->precision && fi_new > fi - gg/(2 * (*Li))) {
+  while ((gg > trainer->precision) && (fi_new > (fi - gg/(2 * (*Li))))) {
     *Li *= 2;
     innerProd = wtx - xtx * grad/(*Li);
     fi_new = model->loss(y[i], innerProd);
@@ -147,8 +145,7 @@ void _sag_linesearch_iteration(GlmTrainer * trainer,
   }
 
   /* Decrease value of Lipschitz constant */
-  *Li *= pow(2.0, -1.0/dataset->nSamples); 
-  
+  *Li *= pow(2.0, -1.0/dataset->nSamples);
 }
 
   /* if (sparse) { */

@@ -9,7 +9,6 @@
 #include "glm_models.h"
 #include "sag_step.h"
 
-const static int one = 1;
 const static int sparse = 0;
 const static double precision = 1.490116119384765625e-8;
 
@@ -20,7 +19,7 @@ const static double precision = 1.490116119384765625e-8;
  *     @param Xt(p, n) real feature matrix
  *     @param y(n, 1) {-1, 1} target matrix
  *     @param lambda scalar regularization parameters
- *     @param stepSizeType scalar constant step size
+ *     @param stepSize scalar constant step size
  *     @param iVals(max_iter, 1) sequence of examples to choose
  *     @param d(p, 1) initial approximation of average gradient
  *     @param g(n, 1) previous derivatives of loss
@@ -144,7 +143,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-
+  Rprintf("Pre training Li: %f\n", *train_set.Li);
   double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
   int stop_condition = 0;
   while (!stop_condition) {
@@ -165,6 +164,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
     convergence_code = 1;
   }
+  Rprintf("Post training Li: %f\n", *train_set.Li);
 
   /*=======\
   | Return |
@@ -179,15 +179,17 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
   SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
   Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
+  SEXP stepSize_return = PROTECT(allocVector(REALSXP, 1)); nprot++;
+  *REAL(stepSize_return) = *train_set.Li;
   SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
   *INTEGER(convergence_code_return) = convergence_code;
 
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 5)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, stepSize_return, convergence_code_return); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 5)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code");
+  SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "stepSize","convergence_code");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);

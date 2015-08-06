@@ -21,7 +21,7 @@ sag_constant <- function(X, y, lambda=0,
                          maxiter=NULL, wInit=NULL,
                          stepSize=NULL, iVals=NULL,
                          d=NULL, g=NULL, covered=NULL,
-                         family=1, tol=1e-3) {
+                         family=1, tol=1e-3, ...) {
 
   if (length(grep("CMatrix", class(X))) > 0) {
     stop("sparse matrices support not implemented yet.")
@@ -43,8 +43,6 @@ sag_constant <- function(X, y, lambda=0,
 
   if (is.null(iVals)) {
     iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
-    ##iVals <- ceiling(NROW(X) * matrix(runif(maxiter), ncol=1))
-    ##iVals[] <- as.integer(iVals)
   }
 
   if (is.null(d)) {
@@ -57,10 +55,9 @@ sag_constant <- function(X, y, lambda=0,
 
   if (is.null(covered)) {
     covered <- matrix(0L, nrow=NROW(X), ncol=1)
-    ##covered[] <- as.integer(covered)
   }
 
-    ## Calling C function
+  ## Calling C function
   .Call("C_sag_constant", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
         as.integer(family), tol)
 }
@@ -71,7 +68,7 @@ sag_constant <- function(X, y, lambda=0,
 sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
                    stepSize=NULL, iVals=NULL,
                    d=NULL, g=NULL, covered=NULL,
-                   stepSizeType=1, family=1, tol=1e-3) {
+                   stepSizeType=1, family=1, tol=1e-3, ...) {
     
   if (length(grep("CMatrix", class(X))) > 0) {
     stop("sparse matrices support not implemented yet.")
@@ -83,7 +80,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
     wInit <- matrix(0, nrow=NCOL(X), ncol=1)
   }
   if (is.null(stepSize)) {
-    stepSize <- 1 
+    stepSize <- 1  
   }
   if (is.null(iVals)) {
     iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
@@ -99,7 +96,6 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
   }
   if (is.null(covered)) {
     covered <- matrix(0L, nrow=NROW(X), ncol=1)
-                                        #covered[] <- as.integer(covered)
   }
   ## Calling C function
   .Call("C_sag_linesearch", wInit, t(X), y, lambda, stepSize, iVals, d, g, covered,
@@ -111,7 +107,7 @@ sag_ls <- function(X, y, lambda=0, maxiter=NULL, wInit=NULL,
 ##' @useDynLib  bigoptim C_sag_adaptive
 sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
                             Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
-                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3) {
+                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3, ...) {
 
     if (length(grep("CMatrix", class(X))) > 0) {
       stop("sparse matrices support not implemented yet.")
@@ -143,7 +139,6 @@ sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
       covered <- matrix(0L, nrow=NROW(X), ncol=1)
       ##covered[] <- as.integer(covered)
     }
-
     .Call("C_sag_adaptive", wInit, t(X), y, lambda, Lmax, Li,
           randVals, d, g, covered, increasing, tol)
 }
