@@ -30,67 +30,6 @@ eps <- 1e-02
 tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
 maxiter <- sample_size * 10
 lambda <- 1/sample_size
-## ## A. Empirical Data tests
-## ## Subsetting empirical data
-## empr_data <- lapply(covtype.libsvm, function(X) X[1:sample_size, , drop=FALSE])
-## empr_data$y[empr_data$y == 1] <- -1
-## empr_data$y[empr_data$y == 2] <- 1
-
-## ## Fitting empirical data with SAG
-## ## Constant SAG fit
-## sag_empr_fits <- list()
-## sag_empr_fits$constant <- sag_constant(empr_data$X,
-##                                        empr_data$y,
-##                                        lambda=lambda,
-##                                        maxiter=maxIter,
-##                                        tol=tol,
-##                                        family=family)
-## ## Linesearh SAG fit
-## sag_empr_fits$linesearch <- sag_ls(empr_data$X,
-##                                    empr_data$y,
-##                                    lambda=lambda,
-##                                    maxiter=maxIter,
-##                                    tol=tol,
-##                                    family=family)
-## ## Glmnet empirical fit
-## glmnet_empr_fit <- glmnet(empr_data$X,
-##                           empr_data$y,
-##                           family="binomial",
-##                           intercept=FALSE,
-##                           alpha=0,
-##                           lambda=lambda)
-## glmnet_empr_hat <- as.matrix(coef(glmnet_empr_fit))[-1, , drop=FALSE]
-## colnames(glmnet_empr_hat) <- rownames(glmnet_empr_hat) <- NULL
-## ## A.1: Consistency with glmnet on empirical data
-## glmnet_SAG_cst_diff_norm <- norm(sag_empr_fits$constant$w - glmnet_empr_hat, 'F') 
-## glmnet_SAG_ls_diff_norm <- norm(sag_empr_fits$linesearch$w - glmnet_empr_hat, 'F')
-## test_that("SAG and glmnet results are consistent on empirical data", {
-##   expect_less_than(glmnet_SAG_cst_diff_norm, eps)
-##   expect_less_than(glmnet_SAG_ls_diff_norm, eps)
-## })
-## ## A.2: Approximate gradient is small on simulated data
-## approx_grad_norm_constant <- anorm(sag_empr_fits$constant$g)
-## approx_grad_norm_ls <- anorm(sag_empr_fits$linesearch$g)  
-## test_that("Approximate gradient is small on empirical data", {
-##   expect_less_than(approx_grad_norm_constant, tol)
-##   expect_less_than(approx_grad_norm_ls, tol)
-## })
-## ## A.3: True gradient is small on simulated data
-## empr_grad_constant <- .bernoulli_grad(empr_data$X,
-##                                       empr_data$y,
-##                                       sag_empr_fits$constant$w,
-##                                       lambda=0)
-## empr_grad_norm_constant <- anorm(empr_grad_constant)
-## empr_grad_ls <- .bernoulli_grad(empr_data$X,
-##                                         empr_data$y,
-##                                         sag_empr_fits$linesearch$w,
-##                                         lambda=0)
-## empr_grad_norm_ls <- anorm(empr_grad_ls)
-## test_that("True Gradient is small on empirical data", {
-##   expect_less_than(empr_grad_norm_constant, 0.1)
-##   expect_less_than(empr_grad_norm_ls, 0.1)
-## })
-
 ## B. Simulated Data tests
 ## Generating simulated data
 sample_size <- 3000
