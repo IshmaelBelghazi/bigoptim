@@ -85,6 +85,8 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL, stepSiz
   ##| Structuring SAG_fit object
   ##`---------------------------
   sag_fit$params <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize)
+  ## Adding approximate  cost gradient
+  sag_fit$approx_grad <- sag_fit$d/NROW(X) + lambda * sag_fit$w
   class(sag_fit) <- "SAG_fit"
   sag_fit
 }

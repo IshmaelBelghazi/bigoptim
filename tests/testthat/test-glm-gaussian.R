@@ -14,14 +14,12 @@ context("GLM -- GAUSSIAN")
 ##       simulated data.                            #
 ## B.2 - Real Gradient is small on simulated data.  #
 #####################################################
-anorm <- function(x) norm(x, 'F')/NROW(x)
 ######################
 ## Setting up Tests ##
 ######################
-## Require libraries
-suppressMessages(library(glmnet))
 ## Algorithms
-family <- 0  ## 0 for gaussian, 1 for Bernoulli, 2 for exponential and 3 for poisson
+model <- "gaussian"
+algs <- list(constant="constant", linesearch="linesearch")
 ## Data
 sample_size <- 3000  ## For sampled and empirical data
 ## Empirical data
@@ -30,7 +28,7 @@ data(covtype.libsvm)
 eps <- 1e-02
 ## Training parameters
 tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
-maxIter <- sample_size * 10
+maxiter <- sample_size * 10
 lambda <- 1/sample_size
 ## ## A. Empirical Data tests
 ## ## Subsetting empirical data
@@ -95,48 +93,38 @@ lambda <- 1/sample_size
 
 ## B. Simulated Data tests
 ## Generating simulated data
+sample_size <- 3000
 true_params <- c(1:3)
 sim_data <- .simulate_gaussian(true_params, sample_size=sample_size, intercept=FALSE)
 sim_data$X <- scale(sim_data$X)
 ## Fitting simulated data with SAG
-## Constant SAG fit
-sag_sim_fits <- list()
-sag_sim_fits$constant <- sag_constant(sim_data$X,
-                                      sim_data$y,
-                                      lambda=lambda,
-                                      maxiter=maxIter,
-                                      tol=tol,
-                                      family=family)
-## Linesearh SAG fit
-sag_sim_fits$linesearch <- sag_ls(sim_data$X,
-                                  sim_data$y,
-                                  lambda=lambda,
-                                  maxiter=maxIter,
-                                  tol=tol,
-                                  family=family)
-## A.1: Approximate gradient is small on simulated data
-get_approx_grad <- function(sag_fit, lambda) {
-  sag_fit$d/NROW(sag_fit$g) + lambda * sag_fit$w 
+sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
+                                                   lambda=lambda,
+                                                   maxiter=maxiter,
+                                                   model=model,
+                                                   standardize=FALSE,
+                                                   tol=tol,
+                                                   fit_alg=alg))
 
-}
-approx_grad_norm_constant <- norm(get_approx_grad(sag_sim_fits$constant, lambda), 'F')  
-approx_grad_norm_ls <- norm(get_approx_grad(sag_sim_fits$linesearch, lambda), 'F')
-test_that("Approximate gradient is small on simulated data", {
-  expect_less_than(approx_grad_norm_constant, eps)
-  expect_less_than(approx_grad_norm_ls, eps)
+## B.1: Approximate gradient is small on simulated data
+approx_grad_norm <- lapply(sag_sim_fits, function(fit) norm(fit$approx_grad, 'F'))
+
+test_that("Approximate gradient is small on empirical data", {
+  expect_less_than(approx_grad_norm$constant, eps)
+  expect_less_than(approx_grad_norm$linesearch, eps)
 })
-## A.2: True gradient is small on simulated data
-sim_grad_constant <- .gaussian_grad(sim_data$X,
-                                    sim_data$y,
-                                    sag_sim_fits$constant$w,
-                                    lambda=lambda)
-sim_grad_norm_constant <- norm(sim_grad_constant, 'F')
-sim_grad_ls <- .gaussian_grad(sim_data$X,
-                              sim_data$y,
-                              sag_sim_fits$linesearch$w,
-                              lambda=lambda)
-sim_grad_norm_ls <- norm(sim_grad_ls, 'F')
-test_that("True Gradient is small on simulated data", {
-  expect_less_than(sim_grad_norm_constant, eps)
-  expect_less_than(sim_grad_norm_ls, eps)
+
+## B.2: True gradient is small on simulated data
+sim_grad <- lapply(sag_sim_fits, function(fit) {
+  .binomial_cost_grad(sim_data$X,
+                  sim_data$y,
+                  coef(fit),
+                  lambda=lambda,
+                  backend="C")})
+
+sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
+
+test_that("True Gradient is small on empirical data", {
+  expect_less_than(sim_grad_norm$constant, eps)
+  expect_less_than(sim_grad_norm$linesearch, eps)
 })

@@ -32,11 +32,10 @@ print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394", cost_g
 print("Running Stochastic Average Gradient with line-search")
 Lmax <- 1
 sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
-                       stepSize=Lmax, stepSizeType=1,
-                       maxiter=maxiter, family=family,
-                       tol=tol, model="binomial", fit_alg="constant",
-                       standardize=FALSE)
-sag_ls_fit <- sag_ls(X, y, lamda=lambda, stepSize=Lmax, stepSizeType=1, family=1)
+                      stepSize=Lmax, stepSizeType=1,
+                      maxiter=maxiter, family=family,
+                      tol=tol, model="binomial", fit_alg="linesearch",
+                      standardize=FALSE)
 cost_ls <- .binomial_cost(X, y, coef(sag_ls_fit), lambda=lambda, backend="C")
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513497",
               cost_ls))
