@@ -27,7 +27,7 @@ data(covtype.libsvm)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
+tol <- 0 ## Stop training when norm of approximate gradient is smaller than tol
 maxiter <- sample_size * 10
 lambda <- 1/sample_size
 ## B. Simulated Data tests
@@ -48,22 +48,22 @@ sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
 ## B.1: Approximate gradient is small on simulated data
 approx_grad_norm <- lapply(sag_sim_fits, function(fit) norm(fit$approx_grad, 'F'))
 
-test_that("Approximate gradient is small on empirical data", {
+test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm$constant, eps)
   expect_less_than(approx_grad_norm$linesearch, eps)
 })
 
 ## B.2: True gradient is small on simulated data
 sim_grad <- lapply(sag_sim_fits, function(fit) {
-  .binomial_cost_grad(sim_data$X,
-                  sim_data$y,
-                  coef(fit),
-                  lambda=lambda,
-                  backend="C")})
+  .gaussian_cost_grad(sim_data$X,
+                      sim_data$y,
+                      coef(fit),
+                      lambda=lambda,
+                      backend="R")})
 
 sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
 
-test_that("True Gradient is small on empirical data", {
+test_that("True Gradient is small on simulated data", {
   expect_less_than(sim_grad_norm$constant, eps)
   expect_less_than(sim_grad_norm$linesearch, eps)
 })

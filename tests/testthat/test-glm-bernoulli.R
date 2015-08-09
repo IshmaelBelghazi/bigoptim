@@ -88,7 +88,7 @@ sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
 ## B.1: Approximate gradient is small on simulated data
 approx_grad_norm <- lapply(sag_sim_fits, function(fit) norm(fit$approx_grad, 'F'))
 
-test_that("Approximate gradient is small on empirical data", {
+test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm$constant, eps)
   expect_less_than(approx_grad_norm$linesearch, eps)
 })
@@ -103,7 +103,7 @@ sim_grad <- lapply(sag_sim_fits, function(fit) {
 
 sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
 
-test_that("True Gradient is small on empirical data", {
+test_that("True Gradient is small on simulated data", {
   expect_less_than(sim_grad_norm$constant, eps)
   expect_less_than(sim_grad_norm$linesearch, eps)
 })

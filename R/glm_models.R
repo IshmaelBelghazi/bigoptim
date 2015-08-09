@@ -5,7 +5,7 @@
 .gaussian_cost <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
-           .R_gaussian_loss(X=X, y=y, w=w, lambda=lambda)
+           .R_gaussian_cost(X=X, y=y, w=w, lambda=lambda)
          },
          C={
            stop("not implemented yet")
@@ -16,7 +16,7 @@
 .gaussian_cost_grad <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
-           .R_gaussian_loss_grad(X=X, y=y, w=w, lambda=lambda)
+           .R_gaussian_cost_grad(X=X, y=y, w=w, lambda=lambda)
          },
          C={
            stop("not implemented yet")
@@ -32,7 +32,7 @@
 ##' @export
 .R_gaussian_cost_grad <- function(X, y, w, lambda=0) {
   grads <- diag(c(X %*% w - y)) %*% X 
-  matrix(colMeans(grads) + lambda * sum(w), ncol=1)
+  matrix(colMeans(grads)/NROW(X) + lambda * w, ncol=1)
 }
 
 
