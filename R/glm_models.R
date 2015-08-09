@@ -27,14 +27,14 @@
   loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
 }
 ##' @export
-##' @useDynLib bigoptim C_bernoulli_cost
+##' @useDynLib bigoptim C_binomial_cost
 .bernoulli_cost_C <- function(X, y, w, lambda=0) {
-  .Call("C_bernoulli_cost", t(X), y, w, lambda)
+  .Call("C_binomial_cost", t(X), y, w, lambda)
 }
 ##' @export
-##' @useDynLib bigoptim C_bernoulli_cost_grad
+##' @useDynLib bigoptim C_binomial_cost_grad
 .bernoulli_cost_grad_C <- function(X, y, w, lambda=0) {
-  .Call("C_bernoulli_cost_grad", t(X), y, w, lambda)
+  .Call("C_binomial_cost_grad", t(X), y, w, lambda)
 }
 ##' @export
 .bernoulli_grad <- function(X, y, w, lambda=0) {

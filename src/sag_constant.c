@@ -61,7 +61,6 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
                         .step = _sag_constant_iteration};
-
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.w = REAL(w)};
@@ -70,11 +69,11 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   switch (*INTEGER(family)) {
     case GAUSSIAN:
       model.loss = gaussian_loss;
-      model.grad = gaussian_grad;
+      model.grad = gaussian_loss_grad;
       break;
-    case BERNOULLI:
-      model.loss = bernoulli_loss;
-      model.grad = bernoulli_grad;
+    case BINOMIAL:
+      model.loss = binomial_loss;
+      model.grad = binomial_loss_grad;
       break;
     case EXPONENTIAL:
       model.loss = exponential_loss;
@@ -82,7 +81,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       break;
     case POISSON:
       model.loss = poisson_loss;
-      model.grad = poisson_grad;
+      model.grad = poisson_loss_grad;
       break;
     default:
       error("Unrecognized glm family");
@@ -175,7 +174,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter");
   setAttrib(results, R_NamesSymbol, results_names);
-  
+
   UNPROTECT(nprot);
   return results;
 }

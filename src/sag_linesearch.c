@@ -65,11 +65,11 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   switch (*INTEGER(family)) {
     case GAUSSIAN:
       model.loss = gaussian_loss;
-      model.grad = gaussian_grad;
+      model.grad = gaussian_loss_grad;
       break;
-    case BERNOULLI:
-      model.loss = bernoulli_loss;
-      model.grad = bernoulli_grad;
+    case BINOMIAL:
+      model.loss = binomial_loss;
+      model.grad = binomial_loss_grad;
       break;
     case EXPONENTIAL:
       model.loss = exponential_loss;
@@ -77,7 +77,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
       break;
     case POISSON:
       model.loss = poisson_loss;
-      model.grad = poisson_grad;
+      model.grad = poisson_loss_grad;
       break;
     default:
       error("Unrecognized glm family");
