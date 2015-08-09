@@ -6,7 +6,7 @@
 \usage{
 sag_constant(X, y, lambda = 0, maxiter = NULL, wInit = NULL,
   stepSize = NULL, iVals = NULL, d = NULL, g = NULL, covered = NULL,
-  family = 1, tol = 0.001)
+  family = 1, tol = 0.001, ...)
 }
 \arguments{
 \item{X}{matrix of examples n X m. Will be transposed when .Call}

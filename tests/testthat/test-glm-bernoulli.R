@@ -24,8 +24,8 @@ family <- 1  ## 0 for gaussian, 1 for Bernoulli, 2 for exponential and 3 for poi
 ## Empirical data
 data(covtype.libsvm)
 dataset <- list()
-dataset$y <- covtype.libsvm$y
-dataset$y[dataset$y ==  2] <- -1
+dataset$y <- matrix(covtype.libsvm$y, nrow=NROW(covtype.libsvm$y), ncol=1)
+dataset$y[dataset$y == 2] <- -1
 dataset$X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
 sample_size <- NROW(dataset$X)
 ## Test parmeters
@@ -55,8 +55,14 @@ sag_empr_fits$linesearch <- sag_ls(empr_data$X,
                                    tol=tol,
                                    family=family)
 ## A.1: Approximate gradient is small on simulated data
-approx_grad_norm_constant <- abs(mean(sag_empr_fits$constant$g))
-approx_grad_norm_ls <- abs(mean(sag_empr_fits$linesearch$g))
+get_approx_grad <- function(sag_fit, lambda) {
+  sag_fit$d/NROW(sag_fit$g) + lambda * sag_fit$w 
+
+}
+
+approx_grad_norm_constant <- norm(get_approx_grad(sag_empr_fits$constant, lambda), 'F')  
+approx_grad_norm_ls <- norm(get_approx_grad(sag_empr_fits$linesearch, lambda), 'F')
+
 test_that("Approximate gradient is small on empirical data", {
   expect_less_than(approx_grad_norm_constant, eps)
   expect_less_than(approx_grad_norm_ls, eps)
@@ -100,11 +106,11 @@ sag_sim_fits$linesearch <- sag_ls(sim_data$X,
                                   tol=tol,
                                   family=family)
 ## B.1: Approximate gradient is small on simulated data
-approx_grad_norm_constant <- abs(mean(sag_sim_fits$constant$g))
-approx_grad_norm_ls <- abs(mean(sag_sim_fits$linesearch$g))  
+approx_grad_norm_constant <- norm(get_approx_grad(sag_sim_fits$constant, lambda), 'F')
+approx_grad_norm_ls <- norm(get_approx_grad(sag_sim_fits$linesearch, lambda), 'F')
 test_that("Approximate gradient is small on simulated data", {
-  expect_less_than(approx_grad_norm_constant, tol)
-  expect_less_than(approx_grad_norm_ls, tol)
+  expect_less_than(approx_grad_norm_constant, eps)
+  expect_less_than(approx_grad_norm_ls, eps)
 })
 ## B.2: True gradient is small on simulated data
 sim_grad_constant <- .bernoulli_grad(sim_data$X,

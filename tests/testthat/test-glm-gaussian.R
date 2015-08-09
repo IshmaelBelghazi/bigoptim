@@ -30,7 +30,7 @@ data(covtype.libsvm)
 eps <- 1e-02
 ## Training parameters
 tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
-maxIter <- sample_size * 100
+maxIter <- sample_size * 10
 lambda <- 1/sample_size
 ## ## A. Empirical Data tests
 ## ## Subsetting empirical data
@@ -115,8 +115,12 @@ sag_sim_fits$linesearch <- sag_ls(sim_data$X,
                                   tol=tol,
                                   family=family)
 ## A.1: Approximate gradient is small on simulated data
-approx_grad_norm_constant <- anorm(sag_sim_fits$constant$g)
-approx_grad_norm_ls <- anorm(sag_sim_fits$linesearch$g)
+get_approx_grad <- function(sag_fit, lambda) {
+  sag_fit$d/NROW(sag_fit$g) + lambda * sag_fit$w 
+
+}
+approx_grad_norm_constant <- norm(get_approx_grad(sag_sim_fits$constant, lambda), 'F')  
+approx_grad_norm_ls <- norm(get_approx_grad(sag_sim_fits$linesearch, lambda), 'F')
 test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm_constant, eps)
   expect_less_than(approx_grad_norm_ls, eps)
@@ -126,12 +130,12 @@ sim_grad_constant <- .gaussian_grad(sim_data$X,
                                     sim_data$y,
                                     sag_sim_fits$constant$w,
                                     lambda=lambda)
-sim_grad_norm_constant <- anorm(sim_grad_constant)
+sim_grad_norm_constant <- norm(sim_grad_constant, 'F')
 sim_grad_ls <- .gaussian_grad(sim_data$X,
                               sim_data$y,
                               sag_sim_fits$linesearch$w,
                               lambda=lambda)
-sim_grad_norm_ls <- anorm(sim_grad_ls)
+sim_grad_norm_ls <- norm(sim_grad_ls, 'F')
 test_that("True Gradient is small on simulated data", {
   expect_less_than(sim_grad_norm_constant, eps)
   expect_less_than(sim_grad_norm_ls, eps)

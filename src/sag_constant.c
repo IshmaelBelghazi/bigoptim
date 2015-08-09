@@ -11,6 +11,7 @@
 
 /* Constant */
 const static int one = 1;
+const static int DEBUG = 0;
 const static int sparse = 0;
 
 /*============\
@@ -64,7 +65,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.w = REAL(w)};
-
+  if (DEBUG) Rprintf("data structures initalized.\n");
   /* Choosing family */
   switch (*INTEGER(family)) {
     case GAUSSIAN:
@@ -86,30 +87,36 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     default:
       error("Unrecognized glm family");
   }
-
+  if (DEBUG) Rprintf("Model functions assigned. \n");
   /*===============\
   | Error Checking |
   \===============*/
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }
+  if (DEBUG) Rprintf(" w and Xt check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
+  if (DEBUG) Rprintf(" nSamples and Xt dim check passed.\n");
   if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
     error("w and d must have the same number of rows");
   }
+  if (DEBUG) Rprintf(" w and d dim check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
     error("w and g must have the same number of rows");
   }
+  if (DEBUG) Rprintf(" w and g dim check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must have the same number of rows");
   }
+  if (DEBUG) Rprintf(" covered and y dim check passed.\n");
   // TODO(Ishmael): SAG_logistic_BLAS line 62
   if (train_set.sparse && trainer.alpha * trainer.lambda == 1) {
     error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
-
+  if (DEBUG) Rprintf(" sparse and alpha * lambda check passd. \n");
+  if (DEBUG) Rprintf("Initial error Checks all passed\n");
   /*==============================\
   | Stochastic Average Gradient   |
   \==============================*/
