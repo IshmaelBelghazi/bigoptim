@@ -1,19 +1,64 @@
-## * Generalized Linear Models R function 
-## ** Gradient functions
-## *** Gaussian
+## * Loss functions
+## ** Gaussian
 ## TODO(Ishmael): Add cost. gradient in math reform and reference
 ##' @export
-.gaussian_loss <- function(X, y, w, lambda=0) {
+.gaussian_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_gaussian_loss(X=X, y=y, w=w, lambda=lambda)
+         },
+         C={
+           stop("not implemented yet")
+         },
+         stop("unrecognized backend"))
+}
+##' @export
+.gaussian_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_gaussian_loss_grad(X=X, y=y, w=w, lambda=lambda)
+         },
+         C={
+           stop("not implemented yet")
+         },
+         stop("unrecognized backend"))
+}
+##' @export
+.R_gaussian_cost <- function(X, y, w, lambda=0) {
   innerProd <- X %*% w
   losses <- 0.5 * (innerProd - y)^2
   loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
 }
 ##' @export
-.gaussian_grad <- function(X, y, w, lambda=0) {
+.R_gaussian_cost_grad <- function(X, y, w, lambda=0) {
   grads <- diag(c(X %*% w - y)) %*% X 
   matrix(colMeans(grads) + lambda * sum(w), ncol=1)
 }
-## *** Bernoulli
+
+
+## *** Binomial
+## ** Binomial Cost
+##' @export
+.binomial_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_binomial_cost(X=X, y=y, w=w, lambda=lambda)
+         },
+         C={
+           .C_binomial_cost(X=X, y=y, w=w, lambda=lambda)
+         },
+         stop("unrecognized backend"))
+}
+.binomial_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_binomial_cost_grad(X=X, y=y, w=w, lambda=lambda)
+         },
+         C={
+           .C_binomial_cost_grad(X=X, y=y, w=w, lambda=lambda)
+         },
+         stop("unrecognized backend"))
+}
 ## Reference Schmidt (2014) and Bishop (2006)
 ## P(C_1|x) = \frac{1}{exp(-w^{t}x)}
 ## D = {y_n, x_n}_{n=1}^{N} where y_{n} \in {-1, 1}
@@ -21,23 +66,13 @@
 ## E = -LL + reg = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
 ## \nabla E = \frac{\sum_n=1^{N} \frac{-y_{n}x_{n}}{(1 + exp(y^{n}w^{t}x_{n}))}}{N} + \lambda W
 ##' @export
-.bernoulli_loss <- function(X, y, w, lambda=0) {
+.R_binomial_cost <- function(X, y, w, lambda=0) {
   innerProd <- X  %*% w
   losses <- log(1 + exp(-y * innerProd))
   loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
 }
 ##' @export
-##' @useDynLib bigoptim C_binomial_cost
-.bernoulli_cost_C <- function(X, y, w, lambda=0) {
-  .Call("C_binomial_cost", t(X), y, w, lambda)
-}
-##' @export
-##' @useDynLib bigoptim C_binomial_cost_grad
-.bernoulli_cost_grad_C <- function(X, y, w, lambda=0) {
-  .Call("C_binomial_cost_grad", t(X), y, w, lambda)
-}
-##' @export
-.bernoulli_grad <- function(X, y, w, lambda=0) {
+.R_binomial_cost_grad <- function(X, y, w, lambda=0) {
   grad <- matrix(0, nrow=NROW(w), ncol=1)
   for (i in 1:NROW(X)) {
     term <- -y[i]/(1 + exp(y[i] * (X[i, ] %*% w)))
@@ -46,3 +81,13 @@
   grad/NROW(X) + lambda * w
 }
 
+##' @export
+##' @useDynLib bigoptim C_binomial_cost
+.C_binomial_cost <- function(X, y, w, lambda=0) {
+  .Call("C_binomial_cost", t(X), y, w, lambda)
+}
+##' @export
+##' @useDynLib bigoptim C_binomial_cost_grad
+.C_binomial_cost_grad <- function(X, y, w, lambda=0) {
+  .Call("C_binomial_cost_grad", t(X), y, w, lambda)
+}

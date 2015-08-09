@@ -41,6 +41,14 @@ empr_data <- dataset
 ## Fitting empirical data with SAG
 ## Constant SAG fit
 sag_empr_fits <- list()
+sag_empr_fits$constant <- sag_fit(empr_data$X,
+                                  empr_data$y,
+                                  lambda=lambda,
+                                  maxiter=maxIter,
+                                  model="binomial",
+                                  tol=tol,
+                                  fit_alg="constant")
+
 sag_empr_fits$constant <- sag_constant(empr_data$X,
                                        empr_data$y,
                                        lambda=lambda,

@@ -1,3 +1,95 @@
+##' @title Stochastic Average Gradient Fit
+##' @return object of class SAG_fit
+##' @export
+##' @useDynLib bigoptim C_sag_constant C_sag_linesearch
+sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL, stepSizeType=1,
+                    iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=TRUE,
+                    tol=1e-3, model="binomial", fit_alg="constant", ...) {
+
+  if (length(grep("CMatrix", class(X))) > 0) {
+    stop("sparse matrices support not implemented yet.")
+  }
+
+  ##,-------------------
+  ##| Data preprocessing
+  ##`-------------------
+  if (standardize) {
+    X <- scale(X)
+  }
+  ##,------------------------------
+  ##| Initializing common variables
+  ##`------------------------------
+  ## Initializing maximum iterations
+  if (is.null(maxiter)) {
+    maxiter <- NROW(X) * 10
+  }
+  ## Initializing weights
+  if (is.null(w)) {
+    w <- matrix(0, nrow=NCOL(X), ncol=1)
+    ##w <- matrix(rnorm(NCOL(X), mean=0, sd=1), nrow=NCOL(X), ncol=1)
+  }
+  ## initializing stochastic index array
+  if (is.null(iVals)) {
+    iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE), nrow=maxiter, ncol=1)
+  }
+  ## Initializing loss derivatives
+  if (is.null(d)) {
+    d <- matrix(0, nrow=NCOL(X), ncol=1)
+  }
+  ## Initializing sum of loss derivatives 
+  if (is.null(g)) {
+    g <- matrix(0, nrow=NROW(X), ncol=1)
+  }
+  ## Iniitializing covered values tracker
+  if (is.null(covered)) {
+    covered <- matrix(0L, nrow=NROW(X), ncol=1)
+  }
+
+  ##,-----------------
+  ##| Setting model id 
+  ##`-----------------
+  model_id <- switch(model,
+                     gaussian=0,
+                     binomial=1,
+                     exponential=2,
+                     poisson=3,
+                     stop("unrecognized model"))
+  ##,------------------------
+  ##| Fit algorithm selection
+  ##`------------------------
+  switch(fit_alg,
+         constant={
+           if (is.null(stepSize)) {
+             Lmax <- 0.25 * max(rowSums(X^2)) + lambda
+             stepSize <- 1/Lmax
+           }
+           ## Calling C function
+           sag_fit <- .Call("C_sag_constant", w, t(X), y, lambda, stepSize,
+                            iVals, d, g, covered, as.integer(model_id), tol) 
+         },
+         linesearch={
+           if (is.null(stepSize)) {
+             stepSize <- 1  
+           }
+           ## Calling C function
+           sag_fit <- .Call("C_sag_linesearch", w, t(X), y, lambda, stepSize, iVals, d, g, covered,
+                            as.integer(stepSizeType), as.integer(model_id), tol)
+
+         },
+         adaptive={
+           stop("not implemented yet")
+         },
+         stop("unrecognized fit algorithm"))
+  
+  ##,---------------------------
+  ##| Structuring SAG_fit object
+  ##`---------------------------
+  sag_fit$params <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize)
+  class(sag_fit) <- "SAG_fit"
+  sag_fit
+}
+
+
 ## * SAG with constant Step Size
 ## logistic regression with SAG. constant step size
 ##' let n be the number of example. p the number of features
