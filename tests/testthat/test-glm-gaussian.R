@@ -27,8 +27,8 @@ data(covtype.libsvm)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 0 ## Stop training when norm of approximate gradient is smaller than tol
-maxiter <- sample_size * 10
+tol <- 0.00001 ## Stop training when norm of approximate gradient is smaller than tol
+maxiter <- sample_size * 1000
 lambda <- 1/sample_size
 ## B. Simulated Data tests
 ## Generating simulated data
