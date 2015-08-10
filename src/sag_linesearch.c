@@ -143,7 +143,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
-  Rprintf("Pre training Li: %f\n", *train_set.Li);
+  //Rprintf("Pre training Li: %f\n", *train_set.Li);
   double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
   int stop_condition = 0;
   while (!stop_condition) {
@@ -164,7 +164,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
     convergence_code = 1;
   }
-  Rprintf("Post training Li: %f\n", *train_set.Li);
+  //Rprintf("Post training Li: %f\n", *train_set.Li);
 
   /*=======\
   | Return |

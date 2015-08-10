@@ -71,6 +71,7 @@ void binomial_cost_grad(double * Xt, double * y, double * w, double lambda,
 double gaussian_loss(double y, double innerProd) {
   return 0.5 * (innerProd - y) * (innerProd - y);
 }
+
 /*Gradient of loss function*/
 double gaussian_loss_grad(double y, double innerProd) {
   return innerProd - y;
