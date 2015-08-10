@@ -23,18 +23,31 @@
          },
          stop("unrecognized backend"))
 }
+
 ##' @export
 .R_gaussian_cost <- function(X, y, w, lambda=0) {
   innerProd <- X %*% w
   losses <- 0.5 * (innerProd - y)^2
   loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
 }
+
 ##' @export
 .R_gaussian_cost_grad <- function(X, y, w, lambda=0) {
   grads <- diag(c(X %*% w - y)) %*% X 
   matrix(colMeans(grads)/NROW(X) + lambda * w, ncol=1)
 }
 
+##' @export
+##' @useDynLib bigoptim C_gaussian_cost
+.C_gaussian_cost <- function(X, y, w, lambda=0) {
+  .Call("C_gaussian_cost", t(X), y, w, lambda)
+}
+
+##' @export
+##' @useDynLib bigoptim C_gaussian_cost_grad
+.C_gaussian_cost_grad <- function(X, y, w, lambda=0) {
+  .Call("C_gaussian_cost_grad", t(X), y, w, lambda)
+}
 
 ## *** Binomial
 ## ** Binomial Cost

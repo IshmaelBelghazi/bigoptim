@@ -18,7 +18,7 @@ const static double precision = 1.490116119384765625e-8;
 /**
  *   Stochastic Average Gradient Descent with line-search and adaptive
  *   lipschitz sampling
- *   
+ *
  *   @param w_s (p, 1) real weights
  *   @param Xt_s (p, n) real features Matrix
  *   @param y_s (m, 1) {-1, 1} targets Matrix
@@ -29,10 +29,10 @@ const static double precision = 1.490116119384765625e-8;
  *   algorithm to use
  *   @param d_s (p, 1) initial approximation of average gradient
  *   @param g_s (n, 1) previousd derivatives of loss
- *  
+ *
  *   @param covered_s  d(p,1) initial approximation of average gradient (should be sum of previous gradients)
  *   @param increasing_s  scalar default is 1 to allow the Lipscthiz constants to increase, set to 0 to only allow them to decrease
- *     
+ *
  *   @return optimal weights (p, 1)
  */
 SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
@@ -46,10 +46,10 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   // int  * lastVisited;
   // int i, j;
   // size_t * jc,* ir;
-  
+
   // double c=1;
   // double * cumSum;
-  
+
   /*======\
   | Input |
   \======*/
@@ -65,7 +65,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
                         .covered = INTEGER(covered),
                         .increasing = *INTEGER(increasing),
                         .sparse = sparse};
-  
+
   /* Initialzing trainer */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
@@ -75,10 +75,10 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
                         .precision = precision,
                         .tol = *REAL(tol),
                         .step = _sag_adaptive_iteration};
-  
+
    /* Initializing Model */
    GlmModel model = {.w = REAL(w), .loss = binomial_loss, .grad = binomial_loss_grad};
-  
+
   /*Error Checking*/
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
@@ -106,7 +106,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   if (sparse) {
     // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 89
   }
-   
+
   /* Compute mean of covered variables */
   double Lmean = 0;
   double nCovered = 0;
@@ -116,11 +116,11 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
       Lmean += train_set.Li[i];
     }
   }
-  
+
   if(nCovered > 0) {
     Lmean /= nCovered;
   }
-  
+
 
   /* Do the O(n log n) initialization of the data structures
      will allow sampling in O(log(n)) time */
@@ -129,11 +129,11 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   if (DEBUG) Rprintf("next power of 2 is: %d\n",nextpow2);
   if (DEBUG) Rprintf("nLevels = %d\n",nLevels);
   /* Counts number of descendents in tree */
-  double * nDescendants = Calloc(nextpow2 * nLevels, double); 
+  double * nDescendants = Calloc(nextpow2 * nLevels, double);
   /* Counts number of descenents that are still uncovered */
-  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double); 
+  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
   /* Sums Lipschitz constant of loss over descendants */
-  double * LiMatrix = Calloc(nextpow2 * nLevels, double); 
+  double * LiMatrix = Calloc(nextpow2 * nLevels, double);
   for(int i = 0; i < train_set.nSamples; i++) {
     nDescendants[i] = 1;
     if (train_set.covered[i]) {
@@ -141,7 +141,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
     } else {
       unCoveredMatrix[i] = 1;
     }
-    
+
   }
   int levelMax = nextpow2;
   for (int level = 1; level < nLevels; level++) {
@@ -163,11 +163,9 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   train_set.unCoveredMatrix = unCoveredMatrix;
   train_set.LiMatrix = LiMatrix;
 
-  
-
   for(int k = 0; k < trainer.maxIter; k++) {
     // TODO(Ishmael): Add iteration for adaptive SAG
-    
+
     trainer.step(&trainer, &model, &train_set);
   }
 
@@ -183,7 +181,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   /*=======\
   | Return |
   \=======*/
-  
+
   /* Preparing return variables  */
   SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
   Memcpy(REAL(w_return), model.w, train_set.nVars);
