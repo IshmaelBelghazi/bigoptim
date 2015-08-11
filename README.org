@@ -17,4 +17,8 @@ devtools::install_github("IshmaelBelghazi/bigoptim")
 
   
 
+
+
+#+BEGIN_RIGHT
 This work is supported by Google Summer of Code 2015 
+#+END_RIGHT
