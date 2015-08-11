@@ -55,16 +55,16 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
   \======*/
 
   /* Initializing dataset */
-  Dataset train_set = { .Xt = REAL(Xt),
-                        .y = REAL(y),
-                        .randVals = REAL(randVals),
-                        .nSamples = INTEGER(GET_DIM(Xt))[1],
-                        .nVars = INTEGER(GET_DIM(Xt))[0],
-                        .Lmax = REAL(Lmax),
-                        .Li = REAL(Li),
-                        .covered = INTEGER(covered),
-                        .increasing = *INTEGER(increasing),
-                        .sparse = sparse};
+  Dataset train_set = {.Xt = REAL(Xt),
+                       .y = REAL(y),
+                       .randVals = REAL(randVals),
+                       .nSamples = INTEGER(GET_DIM(Xt))[1],
+                       .nVars = INTEGER(GET_DIM(Xt))[0],
+                       .Lmax = REAL(Lmax),
+                       .Li = REAL(Li),
+                       .covered = INTEGER(covered),
+                       .increasing = *INTEGER(increasing),
+                       .sparse = sparse};
 
   /* Initialzing trainer */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
@@ -79,7 +79,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
    /* Initializing Model */
    GlmModel model = {.w = REAL(w), .loss = binomial_loss, .grad = binomial_loss_grad};
 
-  /*Error Checking*/
+  /* Error Checking */
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }

@@ -3,9 +3,16 @@
 [[https://travis-ci.org/IshmaelBelghazi/bigpoptim][https://travis-ci.org/IshmaelBelghazi/bigoptim.svg]]
 
 * Description
-
+BigOptim is an R package that implements the Stochastic Average Gradient(SAG)[1] optimization method. For strongly convex problems, SAG achieves batch gradient descent convergence rates while keeping the iteration complexity of stochastic gradient descent. This allows for efficient training of machine learning algorithms with convex cost functions.
 * Setup
 #+BEGIN_SRC R
+install.packages("devtools")
+devtools::install_github("hadley/devtools")  ## Optional
 devtools::install_github("IshmaelBelghazi/bigoptim")
 #+END_SRC
+
+* References
+
+[1] Mark Schmidt, Nicolas Le Roux, and Francis Bach. Minimizing Finite Sums with the Stochastic Average Gradient. arXiv:1309.2388 [cs, math, stat], September 2013. arXiv: 1309.2388. [ [[http://ishmaelbelghazi.bitbucket.org/SAG_proposal/proposal_IshmaelB_bib.html#schmidt_minimizing_2013][bib]] | [[http://arxiv.org/abs/1309.2388][http]] ] 
+
   
