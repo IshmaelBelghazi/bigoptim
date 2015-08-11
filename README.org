@@ -1,4 +1,4 @@
-#+TITLE: Stochastic Average Gradient Descent
+#+TITLE: BigOptim -- Large Scale Finite Sums Cost functions Optimization for R
 
 [[https://travis-ci.org/IshmaelBelghazi/bigpoptim][https://travis-ci.org/IshmaelBelghazi/bigoptim.svg]]
 
