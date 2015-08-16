@@ -1,5 +1,6 @@
 #include "glm_models.h"
-const int one= 1;
+
+const int one = 1;
 
 /*=========\
 | GENERICS |

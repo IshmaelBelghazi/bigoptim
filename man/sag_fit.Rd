@@ -5,9 +5,10 @@
 \title{Stochastic Average Gradient Fit}
 \usage{
 sag_fit(X, y, lambda = 0, maxiter = NULL, w = NULL, stepSize = NULL,
-  stepSizeType = 1, iVals = NULL, d = NULL, g = NULL, covered = NULL,
-  standardize = TRUE, tol = 0.001, model = "binomial",
-  fit_alg = "constant", ...)
+  stepSizeType = 1, Li = NULL, Lmax = NULL, increasing = TRUE,
+  iVals = NULL, d = NULL, g = NULL, covered = NULL,
+  standardize = TRUE, randVals = randVals, tol = 0.001,
+  model = "binomial", fit_alg = "constant", ...)
 }
 \value{
 object of class SAG_fit

@@ -4,10 +4,7 @@
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
 #include "utils.h"
-#include "dataset.h"
-#include "trainers.h"
 #include "glm_models.h"
-#include "sag_step.h"
 
 /*=========\
 | BINOMIAL |

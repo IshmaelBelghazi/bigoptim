@@ -19,12 +19,11 @@ typedef struct GlmTrainer {
                      //  + n * mu)
   double precision;
   double tol;  // Tolerance
-  /* Performs a single step of the attached SAG algorithm */
-  void (*step)(struct GlmTrainer *, GlmModel *, Dataset *);
 } GlmTrainer;
 
 /* trainer type enum */
-typedef enum {CONSTANT, LINESEARCH, ADAPTIVE} Sag_type;
+typedef enum {CONSTANT, LINESEARCH, ADAPTIVE} SAG_TYPE;
 
 
 #endif /* TRAINER_H_ */
+

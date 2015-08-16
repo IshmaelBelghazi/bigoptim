@@ -7,12 +7,13 @@
 #include "dataset.h"
 #include "trainers.h"
 #include "glm_models.h"
-#include "sag_step.h"
 
 /* Constant */
 const static int one = 1;
 const static int DEBUG = 0;
 const static int sparse = 0;
+
+static inline void _sag_constant_iteration(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
 
 /*============\
 | entry-point |
@@ -59,8 +60,8 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .g = REAL(g),
                         .iter = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
-                        .tol = *REAL(tol),
-                        .step = _sag_constant_iteration};
+                        .tol = *REAL(tol)};
+
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
   GlmModel model = {.w = REAL(w)};
@@ -132,7 +133,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* Rprintf("initial cost grad norm %4.6f\n", cost_grad_norm); */
   int stop_condition = 0;
   while (!stop_condition) {
-    trainer.step(&trainer, &model, &train_set);
+    _sag_constant_iteration(&trainer, &model, &train_set);
     //Rprintf("Trainer.iter = %d \n", trainer.iter);
     trainer.iter++;
     cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
@@ -178,4 +179,64 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   UNPROTECT(nprot);
   return results;
 }
+
+static inline void _sag_constant_iteration(GlmTrainer * trainer,
+                                           GlmModel * model,
+                                           Dataset * dataset) {
+
+  int nVars = dataset->nVars;
+  double * w = model->w;
+  double * Xt = dataset->Xt;
+  double * y = dataset->y;
+  double * d = trainer->d;
+  double * g = trainer->g;
+
+  /* Select next training example */
+
+  //if(trainer->iter == 10) error("STOP!");  // Hammer time!
+  int i = dataset->iVals[trainer->iter] - 1;  // start from 1?
+  /* Compute current values of needed parameters */
+  if (dataset->sparse && trainer->iter > 0) {
+    //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
+  }
+
+  /* Compute derivative of loss */
+  double innerProd = 0;
+  if (dataset->sparse) {
+    //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
+  } else {
+    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
+  }
+
+  double grad = model->grad(y[i], innerProd);
+
+  /* Update direction */
+  double scaling = 0;
+  if (dataset->sparse) {
+    // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
+  } else {
+    scaling = grad - g[i];
+    F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
+  }
+  /* Store derivative of loss */
+  g[i] = grad;
+  /* Update the number of examples that we have seen */
+  if (dataset->covered[i] == 0) {
+    dataset->covered[i] = 1;
+    dataset->nCovered++;
+  }
+
+  /* Update parameters */
+  if (dataset->sparse) {
+    // TODO(Ishmael): Line 135 in SAG_logistic_BLAS
+  } else {
+    scaling = 1 - trainer->alpha * trainer->lambda;
+    F77_CALL(dscal)(&nVars, &scaling, w, &one);
+    scaling = -trainer->alpha/dataset->nCovered;
+    F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
+  }
+}
+  /* if (sparse) { */
+  /*   // TODO(Ishmael): Line 153 in SAG_logistic_BLAS */
+  /* } */
 

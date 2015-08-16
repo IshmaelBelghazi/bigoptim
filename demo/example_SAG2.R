@@ -47,8 +47,18 @@ print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394", cost_g
 ## SAG with linesearch and adaptive sampling
 print(paste0("Running Stoachastic Average Gradient with ",
              "linesearch and adaptive sampling"))
-print("Not implemented yet")
+randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
+## sag_adaptive_fit_mark <- sag_adaptive_ls(X, y, lambda=lambda, maxiter=maxiter,
+##                                          randVals=randVals, tol=tol, standardize=FALSE)
+sag_adaptive_fit <- sag_fit(X, y, lambda=lambda, maxiter=maxiter, randVals=randVals,
+                           tol=tol, model="binomial", fit_alg="adaptive", standardize=FALSE)
 
 
+cost_adaptive <- .binomial_cost(X, y, sag_adaptive_fit$w, lambda=lambda, backend="C")
 
+print(sprintf("Cost is: %f. Value in Mark's matlab code: TBD",
+              cost_adaptive))
+cost_grad_adaptive <- .binomial_cost_grad(X, y, sag_adaptive_fit$w, lambda=lambda, backend="C")
+cost_grad_adaptive_norm <- norm(cost_grad_adaptive, 'F')
+print(sprintf("Gradient norm: %f. Value in Mark's matlab code: TBD", cost_grad_adaptive_norm))
  

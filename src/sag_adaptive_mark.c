@@ -6,13 +6,12 @@
 #include <R_ext/BLAS.h>
 #include "utils.h"
 
-
 const static int DEBUG = 0;
 
 /**
  *   Stochastic Average Gradient Descent with line-search and adaptive
  *   lipschitz sampling
- *   
+ *
  *   @param w_s (p, 1) real weights
  *   @param Xt_s (p, n) real features Matrix
  *   @param y_s (m, 1) {-1, 1} targets Matrix
@@ -23,10 +22,10 @@ const static int DEBUG = 0;
  *   algorithm to use
  *   @param d_s (p, 1) initial approximation of average gradient
  *   @param g_s (n, 1) previousd derivatives of loss
- *  
+ *
  *   @param covered_s  d(p,1) initial approximation of average gradient (should be sum of previous gradients)
  *   @param increasing_s  scalar default is 1 to allow the Lipscthiz constants to increase, set to 0 to only allow them to decrease
- *     
+ *
  *   @return optimal weights (p, 1)
  */
 SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax_s,
@@ -72,8 +71,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
   if (DEBUG) Rprintf("maxIter: %d\n", maxIter);
 
   precision = 1.490116119384765625e-8;
-  double * xtx = Calloc(nSamples, double);
-
+  double * xtx = Calloc(nSamples, double); 
 
   /* Error Checking */
     if (nVars != INTEGER(GET_DIM(w_s))[0]) {
@@ -102,7 +100,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
   if (sparse) {
     // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 89
   }
-   
+
   /* Compute mean of covered variables */
   Lmean = 0;
   for(int i = 0;i < nSamples; i++) {
@@ -129,11 +127,11 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
   if (DEBUG) Rprintf("next power of 2 is: %d\n",nextpow2);
   if (DEBUG) Rprintf("nLevels = %d\n",nLevels);
   /* Counts number of descendents in tree */
-  nDescendants = Calloc(nextpow2 * nLevels,double); 
+  nDescendants = Calloc(nextpow2 * nLevels,double);
   /* Counts number of descenents that are still uncovered */
-  unCoveredMatrix = Calloc(nextpow2 * nLevels, double); 
+  unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
   /* Sums Lipschitz constant of loss over descendants */
-  LiMatrix = Calloc(nextpow2 * nLevels, double); 
+  LiMatrix = Calloc(nextpow2 * nLevels, double);
   for(int i = 0; i < nSamples; i++) {
     nDescendants[i] = 1;
     if (covered[i]) 
@@ -153,13 +151,13 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
                                               unCoveredMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
         }
     }
-
   for(int k = 0; k < maxIter; k++) {
     /* Select next training example */
     offset = 0;
     i = 0;
     u = randVals[k+maxIter];
-    if(randVals[k] < (double)(nSamples - nCovered)/(double)nSamples) {
+    double rhs_cond = (double)(nSamples - nCovered)/(double)nSamples;
+  if(randVals[k] < rhs_cond){
       /* Sample fron uncovered guys */
       Z = unCoveredMatrix[nextpow2 * (nLevels - 1)];
       for(int level=nLevels - 1;level >= 0; level--) {
@@ -171,7 +169,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
           i = 2 * i + 1;
         }
       }
-    }
+  }
     else {
       /* Sample from covered guys according to estimate of Lipschitz constant */
       Z = LiMatrix[nextpow2 * (nLevels - 1)] +
@@ -192,7 +190,6 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       }
       if(DEBUG) Rprintf("i = %d\n", i);
     }
-  
     /* Compute current values of needed parameters */
 
     if (sparse) {
@@ -208,7 +205,8 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
     sig = -y[i]/(1 + exp(y[i] * innerProd));
-        
+    Rprintf("Grad @ iter %d with %d: \t %f, innerProd \t %f \n", k, i, sig, innerProd);
+
     /* Update direction */
     if (sparse) {
       // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
@@ -216,7 +214,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       scaling = sig-g[i];
       F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
     }
-    
+
     /* Store derivative of loss */
     g[i] = sig;
 
@@ -225,7 +223,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
     if(increasing && covered[i]) Li[i] /= 2;
     fi = log(1 + exp(-y[i] * innerProd));
 
-    /* Compute f_new as the function value obtained by taking 
+    /* Compute f_new as the function value obtained by taking
      * a step size of 1/Li in the gradient direction */
     wtx = innerProd;
     gg = sig * sig * xtx[i];
@@ -238,7 +236,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       }
       Li[i] *= 2;
       innerProd = wtx - xtx[i] * sig/Li[i];
-      fi_new = log(1 + exp(-y[i] * innerProd));            
+      fi_new = log(1 + exp(-y[i] * innerProd));
     }
     if(Li[i] > *Lmax) *Lmax = Li[i];
 
@@ -248,7 +246,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       nCovered++;
       Lmean = Lmean *((double)(nCovered-1)/(double)nCovered) +
               Li[i]/(double)nCovered;
-            
+
       /* Update unCoveredMatrix so we don't sample this guy when looking for a new guy */
       ind = i;
       for(int level = 0; level< nLevels; level++) {
@@ -277,7 +275,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
           Rprintf("%f ", LiMatrix[ind + nextpow2 * j]);
         }
         Rprintf("\n");
-      }   
+      }
     }
      /* Compute step size */
     alpha = ((double)(nSamples - nCovered)/(double)nSamples)/(*Lmax + lambda) +
@@ -292,7 +290,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       scaling = -alpha/nCovered;
       F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
-                
+
     /* Decrease value of max Lipschitz constant */
     if (increasing) {
       *Lmax *= pow(2.0,-1.0/nSamples);
@@ -312,7 +310,7 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
   /*=======\
   | Return |
   \=======*/
-  
+
   /* Preparing return variables  */
   SEXP w_return = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
   Memcpy(REAL(w_return), w, nVars);
