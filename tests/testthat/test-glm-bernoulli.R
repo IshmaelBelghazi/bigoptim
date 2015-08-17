@@ -20,7 +20,8 @@ context("GLM -- BERNOULLI")
 ## Require libraries
 ## Algorithms
 model <- "binomial"
-algs <- list(constant="constant", linesearch="linesearch")
+algs <- list(constant="constant",
+             linesearch="linesearch")
 ## Data
 ## Empirical data
 data(covtype.libsvm)

@@ -205,7 +205,6 @@ SEXP C_sag_adaptive_mark(SEXP w_s, SEXP Xt_s, SEXP y_s, SEXP lambda_s, SEXP Lmax
       innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
     sig = -y[i]/(1 + exp(y[i] * innerProd));
-    Rprintf("Grad @ iter %d with %d: \t %f, innerProd \t %f \n", k, i, sig, innerProd);
 
     /* Update direction */
     if (sparse) {

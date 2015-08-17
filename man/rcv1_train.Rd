@@ -11,7 +11,7 @@ WRITEME!
 mini.covtype.libsvm
 rcv1_train
 
-WRTIEME!
+WRITEME!
 }
 \usage{
 rcv1_train

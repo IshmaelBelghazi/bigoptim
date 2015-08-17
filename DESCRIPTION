@@ -1,9 +1,13 @@
 Package: bigoptim
 Title: What the Package Does (one line, title case)
 Version: 0.0.0.9000
+Date: $Date$
 Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph)
-Depends: R (>= 3.1.2)
+Depends: R (>= 3.1.2), Matrix (>= 1.1.1)
+LinkingTo: Matrix, stats
+Imports: Matrix, stats
 License: MIT + file LICENSE
 LazyData: true
+NeedsCompilation: yes
 Suggests: testthat, glmnet

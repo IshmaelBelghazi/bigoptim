@@ -11,7 +11,7 @@
 
 ##' rcv1_train
 ##' @format WRITEME!
-##' @source WRTIEME!
+##' @source WRITEME!
 "rcv1_train"
 
 ##' GlmnetExamples

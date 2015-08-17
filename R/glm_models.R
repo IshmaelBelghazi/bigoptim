@@ -38,13 +38,13 @@
 }
 
 ##' @export
-##' @useDynLib bigoptim C_gaussian_cost
+##' @useDynLib bigoptim, .registration=TRUE
 .C_gaussian_cost <- function(X, y, w, lambda=0) {
   .Call("C_gaussian_cost", t(X), y, w, lambda)
 }
 
 ##' @export
-##' @useDynLib bigoptim C_gaussian_cost_grad
+##' @useDynLib bigoptim, .registration=TRUE
 .C_gaussian_cost_grad <- function(X, y, w, lambda=0) {
   .Call("C_gaussian_cost_grad", t(X), y, w, lambda)
 }
@@ -95,12 +95,13 @@
 }
 
 ##' @export
-##' @useDynLib bigoptim C_binomial_cost
+##' @useDynLib bigoptim, .registration=TRUE
+
 .C_binomial_cost <- function(X, y, w, lambda=0) {
   .Call("C_binomial_cost", t(X), y, w, lambda)
 }
 ##' @export
-##' @useDynLib bigoptim C_binomial_cost_grad
+##' @useDynLib bigoptim, .registration=TRUE
 .C_binomial_cost_grad <- function(X, y, w, lambda=0) {
   .Call("C_binomial_cost_grad", t(X), y, w, lambda)
 }

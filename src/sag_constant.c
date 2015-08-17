@@ -1,19 +1,12 @@
-#include <stdio.h>
-#include <R.h>
-#include <Rdefines.h>
-#include <Rinternals.h>
-#include <R_ext/BLAS.h>
-#include "utils.h"
-#include "dataset.h"
-#include "trainers.h"
-#include "glm_models.h"
-
+#include "sag_constant.h"
 /* Constant */
 const static int one = 1;
 const static int DEBUG = 0;
 const static int sparse = 0;
 
-static inline void _sag_constant_iteration(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
+static inline void _sag_constant_iteration(GlmTrainer * trainer,
+                                           GlmModel * model,
+                                           Dataset * dataset);
 
 /*============\
 | entry-point |
@@ -33,7 +26,6 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer, GlmModel * mode
  * @param covered(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
  */
-
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
                     SEXP covered, SEXP family, SEXP tol) {

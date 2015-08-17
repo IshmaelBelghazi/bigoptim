@@ -1,7 +1,7 @@
 ##' @title Stochastic Average Gradient Fit
 ##' @return object of class SAG_fit
 ##' @export
-##' @useDynLib bigoptim C_sag_constant C_sag_linesearch C_sag_adaptive
+##' @useDynLib bigoptim, .registration=TRUE
 sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=TRUE,
@@ -109,45 +109,45 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
 }
 
 
-## * Sag with line-search and adaptive sampling
-##' @export
-##' @useDynLib  bigoptim C_sag_adaptive_mark
-sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
-                            Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
-                            d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3, ...) {
+## ## * Sag with line-search and adaptive sampling
+## ##' @export
+## ##' @useDynLib  bigoptim C_sag_adaptive_mark
+## sag_adaptive_ls <- function(X, y, lambda=0, Lmax=NULL,
+##                             Li=NULL, maxiter=NULL, randVals=NULL, wInit=NULL,
+##                             d=NULL, g=NULL, covered=NULL, increasing=TRUE, family=1, tol=1e-3, ...) {
 
-    if (length(grep("CMatrix", class(X))) > 0) {
-      stop("sparse matrices support not implemented yet.")
-    }
-    if (is.null(Li)) {
-      ## Initial guess of overall Lipschitz Constant
-      Lmax <- 1
-    }
-    if (is.null(Li)) {
-      ## Initial guess of Lipschitz constant of each function
-      Li <- matrix(1, nrow=NROW(X), ncol=1)
-    }
-    if (is.null(maxiter)) {
-      maxiter <- NROW(X) * 10
-    }
-    if (is.null(randVals)) {
-      randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
-    }
-    if (is.null(wInit)) {
-      wInit <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
-    if (is.null(d)) {
-      d <- matrix(0, nrow=NCOL(X), ncol=1)
-    }
-    if (is.null(g)) {
-      g <- matrix(0, nrow=NROW(X), ncol=1)
-    }
-    if (is.null(covered)) {
-      covered <- matrix(0L, nrow=NROW(X), ncol=1)
-      ##covered[] <- as.integer(covered)
-    }
-    .Call("C_sag_adaptive_mark", wInit, t(X), y, lambda, Lmax, Li,
-          randVals, d, g, covered, increasing, tol)
-}
+##     if (length(grep("CMatrix", class(X))) > 0) {
+##       stop("sparse matrices support not implemented yet.")
+##     }
+##     if (is.null(Li)) {
+##       ## Initial guess of overall Lipschitz Constant
+##       Lmax <- 1
+##     }
+##     if (is.null(Li)) {
+##       ## Initial guess of Lipschitz constant of each function
+##       Li <- matrix(1, nrow=NROW(X), ncol=1)
+##     }
+##     if (is.null(maxiter)) {
+##       maxiter <- NROW(X) * 10
+##     }
+##     if (is.null(randVals)) {
+##       randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
+##     }
+##     if (is.null(wInit)) {
+##       wInit <- matrix(0, nrow=NCOL(X), ncol=1)
+##     }
+##     if (is.null(d)) {
+##       d <- matrix(0, nrow=NCOL(X), ncol=1)
+##     }
+##     if (is.null(g)) {
+##       g <- matrix(0, nrow=NROW(X), ncol=1)
+##     }
+##     if (is.null(covered)) {
+##       covered <- matrix(0L, nrow=NROW(X), ncol=1)
+##       ##covered[] <- as.integer(covered)
+##     }
+##     .Call("C_sag_adaptive_mark", wInit, t(X), y, lambda, Lmax, Li,
+##           randVals, d, g, covered, increasing, tol)
+## }
 
 ## Error Checking

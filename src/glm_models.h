@@ -1,6 +1,5 @@
 #ifndef GLM_MODELS_H_
 #define GLM_MODELS_H_
-#include <stdio.h>
 #include <math.h>
 #include <R.h>
 #include <R_ext/BLAS.h>

@@ -1,19 +1,12 @@
-#include <stdio.h>
-#include <R.h>
-#include <Rdefines.h>
-#include <Rinternals.h>
-#include <R_ext/BLAS.h>
-#include "utils.h"
-#include "dataset.h"
-#include "trainers.h"
-#include "glm_models.h"
-
+#include "sag_linesearch.h"
 const static int sparse = 0;
 const static double precision = 1.490116119384765625e-8;
 const static int one = 1;
+
 static inline void _sag_linesearch_iteration(GlmTrainer * trainer,
-                                      GlmModel * model,
-                                      Dataset * dataset);
+                                             GlmModel * model,
+                                             Dataset * dataset);
+
 /**
  *     Logistic regression stochastic average gradient trainer
  *
