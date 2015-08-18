@@ -8,6 +8,7 @@
 
 /* TEMPORTARY -- STARTS */
 #include "sparse_test.h"
+#include "sag_constant_marks.h"
 /* TEMPORTARY -- ENDS */
 #include <R_ext/Rdynload.h>
 
@@ -25,11 +26,12 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_exponential_cost_grad, 4),
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
-  CALLDEF(C_sag_constant, 11),
+  CALLDEF(C_sag_constant, 12),
   CALLDEF(C_sag_linesearch, 12),
   CALLDEF(C_sag_adaptive, 13),
   /* TEMPORARY -- STARTS*/
   CALLDEF(C_sparse_test, 1),
+  CALLDEF(C_sag_constant_mark, 9),
   /* TEMPORARY -- ENDS */
   {NULL, NULL, 0}
 };

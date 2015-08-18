@@ -29,6 +29,13 @@ typedef struct {
                              // uncovered
   double * LiMatrix;  // Sums of Lipschitz constant of loss over descendents
   
+  /* Sparse indices */
+  int * ir;
+  int * jc;
+  /* Sparse Variables*/
+  int * lastVisited;
+  double * cumSum;
+
 } Dataset;
 
 #endif /* DATASET_H_*/

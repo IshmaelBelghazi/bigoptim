@@ -1,13 +1,18 @@
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include "sag_constant.h"
+#include "Matrix.h"
+#include "cholmod.h"
+
+#define R_TRACE( x, ... ) Rprintf(" TRACE @ %s:%d \t" x "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 /* Constant */
 const static int one = 1;
 const static int DEBUG = 0;
-const static int sparse = 0;
-
 static inline void _sag_constant_iteration(GlmTrainer * trainer,
                                            GlmModel * model,
                                            Dataset * dataset);
-
 /*============\
 | entry-point |
 \============*/
@@ -25,29 +30,44 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer,
  * @param g(n, 1) previous derivatives of loss
  * @param covered(n, 1) whether the example has been visited
  * @return optimal weights (p, 1)
+ *
  */
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered, SEXP family, SEXP tol) {
-
+                    SEXP covered, SEXP family, SEXP tol, SEXP sparse) {
   // Initializing garbage collection protection counter
   int nprot = 0;
   /*======\
   | Input |
   \======*/
-
   /* Initializing dataset */
-  Dataset train_set = {.Xt = REAL(Xt),
-                       .y = REAL(y),
+  Dataset train_set = {.y = REAL(y),
                        .iVals = INTEGER(iVals),
                        .covered = INTEGER(covered),
                        .nCovered = 0,
-                       .nSamples = INTEGER(GET_DIM(Xt))[1],
-                       .nVars = INTEGER(GET_DIM(Xt))[0],
-                       .sparse = sparse};
+                       .sparse = *INTEGER(sparse)};
+  CHM_SP cXt;
+  if (train_set.sparse) {
+    cXt = AS_CHM_SP(Xt);
+    /* Sparse Array pointers*/
+    train_set.ir = cXt->i;
+    train_set.jc = cXt->p;
+    train_set.Xt = cXt->x;
+    /* Sparse Variables */
+    train_set.nVars = cXt->nrow;
+    train_set.nSamples = cXt->ncol;
+    /* Allocate Memory Needed for lazy update */
+    train_set.lastVisited = Calloc(train_set.nVars, int);
+    train_set.cumSum = Calloc(INTEGER(GET_DIM(iVals))[0], double);
+  } else {
+    train_set.Xt = REAL(Xt);
+    train_set.nSamples = INTEGER(GET_DIM(Xt))[1];
+    train_set.nVars = INTEGER(GET_DIM(Xt))[0];
+  }
   /* Initializing Trainer */
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .alpha = *REAL(stepSize),
+                        .c = 1.0,
                         .d = REAL(d),
                         .g = REAL(g),
                         .iter = 0,
@@ -56,6 +76,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
 
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
+
   GlmModel model = {.w = REAL(w)};
   if (DEBUG) Rprintf("data structures initalized.\n");
   /* Choosing family */
@@ -79,7 +100,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
     default:
       error("Unrecognized glm family");
   }
-  if (DEBUG) Rprintf("Model functions assigned. \n");
+if (DEBUG) Rprintf("Model functions assigned. \n");
   /*===============\
   | Error Checking |
   \===============*/
@@ -112,11 +133,8 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*==============================\
   | Stochastic Average Gradient   |
   \==============================*/
-  /* Allocate Memory Needed for lazy update */
-  if (sparse) {
-  // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
-  }
-  /* Counting*/
+
+  /* Counting covered examples*/
   for (int i = 0; i < train_set.nSamples; i++) {
     if (train_set.covered[i] != 0) train_set.nCovered++;
   }
@@ -126,7 +144,9 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   int stop_condition = 0;
   while (!stop_condition) {
     _sag_constant_iteration(&trainer, &model, &train_set);
-    //Rprintf("Trainer.iter = %d \n", trainer.iter);
+    if (trainer.iter % 10000 == 0) {
+      Rprintf("Trainer.iter = %d \n", trainer.iter);
+    }
     trainer.iter++;
     cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
     /* if (trainer.iter % 1000 == 0) { */
@@ -141,6 +161,20 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   if (cost_grad_norm > trainer.tol) {
     warning("(constant) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
     convergence_code = 1;
+  }
+
+  if (train_set.sparse) {
+    for(int j = 0; j < train_set.nVars; j++) {
+      if (train_set.lastVisited[j]==0) {
+        model.w[j] -= trainer.d[j]*train_set.cumSum[trainer.maxIter-1];
+      } else {
+        model.w[j] -= trainer.d[j]*(train_set.cumSum[trainer.maxIter-1]-train_set.cumSum[train_set.lastVisited[j]-1]);
+      }
+    }
+    double scaling = trainer.c;
+    F77_CALL(dscal)(&train_set.nVars,&scaling,model.w,&one);
+    Free(train_set.lastVisited);
+    Free(train_set.cumSum);
   }
 
   /*=======\
@@ -186,16 +220,29 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer,
   /* Select next training example */
 
   //if(trainer->iter == 10) error("STOP!");  // Hammer time!
-  int i = dataset->iVals[trainer->iter] - 1;  // start from 1?
+  int i = dataset->iVals[trainer->iter] - 1;
   /* Compute current values of needed parameters */
   if (dataset->sparse && trainer->iter > 0) {
-    //TODO(Ishmael): Line 91 in SAG_logistic_BLAS
+    for (int j = dataset->jc[i]; j < dataset->jc[i+1]; j++) {
+      if (dataset->lastVisited[dataset->ir[j]] == 0) {
+        model->w[dataset->ir[j]] -= d[dataset->ir[j]] *
+          dataset->cumSum[trainer->iter - 1];
+      } else {
+        model->w[dataset->ir[j]] -= d[dataset->ir[j]] *
+          (dataset->cumSum[trainer->iter-1] - dataset->cumSum[dataset->lastVisited[dataset->ir[j]] - 1]);
+      }
+      dataset->lastVisited[dataset->ir[j]] = trainer->iter;
+    }
   }
 
   /* Compute derivative of loss */
   double innerProd = 0;
   if (dataset->sparse) {
-    //TODO(Ishmael): Line 104 in SAG_LOGISTIC_BLAS
+    innerProd = 0;
+    for (int j=dataset->jc[i]; j < dataset->jc[i+1]; j++) {
+      innerProd += w[dataset->ir[j]] * Xt[j];
+    }
+    innerProd *= trainer->c;
   } else {
     innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
   }
@@ -205,7 +252,9 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer,
   /* Update direction */
   double scaling = 0;
   if (dataset->sparse) {
-    // TODO(Ishmael): Line 117 in SAG_logistic_BLAS
+    for(int j=dataset->jc[i]; j < dataset->jc[i+1]; j++) {
+      d[dataset->ir[j]] += Xt[j]*(grad - g[i]);
+    }
   } else {
     scaling = grad - g[i];
     F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
@@ -220,7 +269,13 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer,
 
   /* Update parameters */
   if (dataset->sparse) {
-    // TODO(Ishmael): Line 135 in SAG_logistic_BLAS
+    trainer->c *= 1 - trainer->alpha * trainer->lambda;
+    if (trainer->iter == 0) {
+      dataset->cumSum[0] = trainer->alpha/(trainer->c * dataset->nCovered);
+    } else {
+      dataset->cumSum[trainer->iter] = dataset->cumSum[trainer->iter-1] +
+        trainer->alpha/(trainer->c * dataset->nCovered);
+    }
   } else {
     scaling = 1 - trainer->alpha * trainer->lambda;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
@@ -228,7 +283,4 @@ static inline void _sag_constant_iteration(GlmTrainer * trainer,
     F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
   }
 }
-  /* if (sparse) { */
-  /*   // TODO(Ishmael): Line 153 in SAG_logistic_BLAS */
-  /* } */
 

@@ -7,15 +7,16 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=TRUE,
                     randVals=randVals,
                     tol=1e-3, model="binomial", fit_alg="constant", ...) {
+  library(Matrix)
+  ## if (length(grep("CMatrix", class(X))) > 0) {
+  ##   stop("sparse matrices support not implemented yet.")
+  ## }
 
-  if (length(grep("CMatrix", class(X))) > 0) {
-    stop("sparse matrices support not implemented yet.")
-  }
-
+  sparse <- if (class(X) == "dgCMatrix") 1 else 0
   ##,-------------------
   ##| Data preprocessing
   ##`-------------------
-  if (standardize) {
+  if (standardize && !sparse) {
     X <- scale(X)
   }
   ##,------------------------------
@@ -68,11 +69,11 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_constant", w, t(X), y, lambda, stepSize,
-                            iVals, d, g, covered, as.integer(model_id), tol) 
+                            iVals, d, g, covered, as.integer(model_id), tol, as.integer(sparse))
          },
          linesearch={
            if (is.null(stepSize)) {
-             stepSize <- 1  
+             stepSize <- 1
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_linesearch", w, t(X), y, lambda, stepSize, iVals, d, g, covered,
@@ -91,7 +92,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            if (is.null(randVals)) {
              randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
            }
-
+           
            sag_fit <- .Call("C_sag_adaptive", w, t(X), y, lambda,
                             Lmax, Li, randVals,
                             d, g, covered, increasing, as.integer(model_id), tol)
@@ -107,7 +108,12 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
   class(sag_fit) <- "SAG_fit"
   sag_fit
 }
-
+## TEMPORARY -------------------------------------------------------------------
+##' @export
+##' @useDynLib bigoptim, .registration=TRUE
+sag_constant_mark <- function(w, X, y, lambda, stepSize, iVals, d, g, covered) {
+  .Call("C_sag_constant_mark", w, t(X), y, lambda, stepSize, iVals, d, g, covered)
+}
 
 ## ## * Sag with line-search and adaptive sampling
 ## ##' @export

@@ -1,6 +1,20 @@
 #!/usr/bin/env Rscript
 ## -*- compile-command: "make test/custom" -*-
 library(devtools)
+library(methods)
+library(Matrix)
 load_all()
 ##gctorture(on=TRUE)
-demo("example_SAG2")
+##demo("example_SAG2")
+## test_sparse_dset(dummy=TRUE)
+data(rcv1_train)
+lambda <- 1/NROW(rcv1_train$X)
+n <- NROW(rcv1_train$X)
+maxiter <- n 
+
+test <- sag_fit(X=rcv1_train$X,
+                y=rcv1_train$y,
+                lambda=lambda,
+                maxiter=maxiter,
+                fit_alg="constant",
+                model="binomial")
