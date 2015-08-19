@@ -4,7 +4,7 @@
 ##' @useDynLib bigoptim, .registration=TRUE
 sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
-                    iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=TRUE,
+                    iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=FALSE,
                     randVals=NULL,
                     tol=1e-3, model="binomial", fit_alg="constant", ...) {
   library(Matrix)
