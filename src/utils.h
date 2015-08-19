@@ -37,4 +37,5 @@
 double _log_sum_exp(const double * restrict array, const int ar_size);
 double log2(double x);
 double get_cost_grad_norm(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
+void count_covered_samples(Dataset* dataset);
 #endif /* UTILS_H */

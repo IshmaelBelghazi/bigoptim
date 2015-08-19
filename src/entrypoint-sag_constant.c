@@ -1,16 +1,9 @@
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-#include "sag_constant.h"
-#include "Matrix.h"
-#include "cholmod.h"
-
-#define R_TRACE( x, ... ) Rprintf(" TRACE @ %s:%d \t" x "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#include "entrypoint-sag_constant.h"
 
 /* Constant */
 const static int DEBUG = 0;
 
-/*============                                  \
+/*============\
 | entry-point |
 \============*/
 
@@ -131,10 +124,7 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
   \==============================*/
 
   /* Counting covered examples*/
-  for (int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i] != 0) train_set.nCovered++;
-  }
-
+  count_covered_samples(&train_set);
   /* Training */
   _sag_constant(&trainer, &model, &train_set);
 

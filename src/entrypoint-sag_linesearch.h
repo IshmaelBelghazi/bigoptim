@@ -4,10 +4,11 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
-#include "utils.h"
+#include "sag_linesearch.h"
 #include "dataset.h"
 #include "trainers.h"
 #include "glm_models.h"
+#include "utils.h"
 #include "Matrix.h"
 #include "cholmod.h"
 

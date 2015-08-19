@@ -4,10 +4,13 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "sag_constant.h"
 #include "utils.h"
 #include "dataset.h"
 #include "trainers.h"
 #include "glm_models.h"
+#include "Matrix.h"
+#include "cholmod.h"
 
 SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP d, SEXP g,

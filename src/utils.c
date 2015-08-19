@@ -58,6 +58,11 @@ double get_cost_grad_norm(GlmTrainer * trainer, GlmModel * model, Dataset * data
     cost_grad_norm += pow(trainer->d[i] + norm_const * trainer->lambda * model->w[i], 2.0);
   }
   return sqrt(cost_grad_norm)/norm_const;
+}
 
-
+/* Counts Covered samples*/
+void count_covered_samples(Dataset* dataset) {
+  for (int i = 0; i < dataset->nSamples; i++) {
+    if (dataset->covered[i] != 0) dataset->nCovered++;
+  }
 }

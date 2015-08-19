@@ -5,7 +5,7 @@
 sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=TRUE,
-                    randVals=randVals,
+                    randVals=NULL,
                     tol=1e-3, model="binomial", fit_alg="constant", ...) {
   library(Matrix)
   ## if (length(grep("CMatrix", class(X))) > 0) {
@@ -29,7 +29,6 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
   ## Initializing weights
   if (is.null(w)) {
     w <- matrix(0, nrow=NCOL(X), ncol=1)
-    ##w <- matrix(rnorm(NCOL(X), mean=0, sd=1), nrow=NCOL(X), ncol=1)
   }
   ## initializing stochastic index array
   if (is.null(iVals)) {

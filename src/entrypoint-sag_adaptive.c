@@ -1,5 +1,4 @@
 #include "entrypoint-sag_adaptive.h"
-#include "sag_adaptive.h"
 
 const static int DEBUG = 0;
 const static double precision = 1.490116119384765625e-8;
@@ -176,7 +175,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   train_set.nDescendants = nDescendants;
   train_set.unCoveredMatrix = unCoveredMatrix;
   train_set.LiMatrix = LiMatrix;
-
+  /* Training */
   _sag_adaptive(&trainer, &model, &train_set);
 
   /*=======\

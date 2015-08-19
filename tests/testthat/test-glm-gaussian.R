@@ -19,7 +19,9 @@ context("GLM -- GAUSSIAN")
 ######################
 ## Algorithms
 model <- "gaussian"
-algs <- list(constant="constant", linesearch="linesearch")
+algs <- list(constant="constant",
+             linesearch="linesearch",
+             adaptive="adaptive")
 ## Data
 sample_size <- 3000  ## For sampled and empirical data
 ## Empirical data
@@ -51,6 +53,7 @@ approx_grad_norm <- lapply(sag_sim_fits, function(fit) norm(fit$approx_grad, 'F'
 test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm$constant, eps)
   expect_less_than(approx_grad_norm$linesearch, eps)
+  expect_less_than(approx_grad_norm$adaptive, eps)
 })
 
 ## B.2: True gradient is small on simulated data
@@ -66,4 +69,5 @@ sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
 test_that("True Gradient is small on simulated data", {
   expect_less_than(sim_grad_norm$constant, eps)
   expect_less_than(sim_grad_norm$linesearch, eps)
+  expect_less_than(sim_grad_norm$adaptive, eps)
 })

@@ -1,5 +1,4 @@
 #include "entrypoint-sag_linesearch.h"
-#include "sag_linesearch.h"
 
 const static double precision = 1.490116119384765625e-8;
 
@@ -117,19 +116,13 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
   /* } */
 
-  for(int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i]!=0) train_set.nCovered++;
-  }
-
-
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
 
   /* Counting*/
-  for (int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i] != 0) train_set.nCovered++;
-  }
+  count_covered_samples(&train_set);
+  /* Training */
   _sag_linesearch(&trainer, &model, &train_set);
   /*=======\
   | Return |

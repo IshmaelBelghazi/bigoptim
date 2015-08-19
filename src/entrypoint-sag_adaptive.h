@@ -4,6 +4,7 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
+#include "sag_adaptive.h"
 #include "glm_models.h"
 #include "dataset.h"
 #include "trainers.h"
