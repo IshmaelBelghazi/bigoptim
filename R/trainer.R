@@ -7,7 +7,6 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=FALSE,
                     randVals=NULL,
                     tol=1e-3, model="binomial", fit_alg="constant", ...) {
-  library(Matrix)
   ## if (length(grep("CMatrix", class(X))) > 0) {
   ##   stop("sparse matrices support not implemented yet.")
   ## }
