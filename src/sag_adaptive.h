@@ -9,9 +9,6 @@
 #include "trainers.h"
 #include "utils.h"
 
-
-SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
-                    SEXP Li, SEXP randVals, SEXP d, SEXP g, SEXP covered,
-                    SEXP increasing, SEXP family, SEXP tol);
+void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset);
 
 #endif /* SAG_ADAPTIVE_H_ */

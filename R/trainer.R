@@ -69,19 +69,22 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_constant", w, t(X), y, lambda, stepSize,
-                            iVals, d, g, covered, as.integer(model_id), tol, as.integer(sparse))
+                            iVals, d, g, covered, as.integer(model_id), tol,
+                            as.integer(sparse))
          },
          linesearch={
            if (is.null(stepSize)) {
+             ## TODO(Ishmael): Confusion between Lmax and stepSize
              stepSize <- 1
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_linesearch", w, t(X), y, lambda, stepSize, iVals, d, g, covered,
-                            as.integer(stepSizeType), as.integer(model_id), tol)
+                            as.integer(stepSizeType), as.integer(model_id), tol,
+                            as.integer(sparse))
 
          },
          adaptive={        
-           if (is.null(Li)) {
+           if (is.null(Lmax)) {
              ## Initial guess of overall Lipschitz Constant
              Lmax <- 1
            }
@@ -95,7 +98,8 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            
            sag_fit <- .Call("C_sag_adaptive", w, t(X), y, lambda,
                             Lmax, Li, randVals,
-                            d, g, covered, increasing, as.integer(model_id), tol)
+                            d, g, covered, increasing, as.integer(model_id), tol,
+                            as.integer(sparse))
          },
          stop("unrecognized fit algorithm"))
   

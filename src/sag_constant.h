@@ -9,9 +9,6 @@
 #include "trainers.h"
 #include "glm_models.h"
 
-SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered, SEXP family, SEXP tol, SEXP sparse);
-
+void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
 
 #endif /* SAG_CONSTANT_H_ */

@@ -9,9 +9,6 @@
 #include "trainers.h"
 #include "glm_models.h"
 
-SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                      SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType, SEXP family, SEXP tol);
-
+void _sag_linesearch(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
 
 #endif /* SAG_LINESEARCH_H_ */

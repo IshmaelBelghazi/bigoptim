@@ -17,3 +17,13 @@ sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxIter,
 cost_constant <- .binomial_cost(X, y, coef(sag_constant_fit), lambda=lambda, backend="R")
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.201831",
               cost_constant))
+
+## -----------------------------------------------------------------------------
+## SAG with Line-Search
+Lmax <- 1
+sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxIter,
+                            tol=0, stepSize=Lmax,
+                            fit_alg="linesearch", model="binomial")
+cost_ls <- .binomial_cost(X, y, coef(sag_ls_fit), lambda=lambda, backend="R")
+print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.201831",
+              cost_ls))

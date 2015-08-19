@@ -19,7 +19,6 @@ typedef struct GlmTrainer {
                      //  + n * mu)
   double precision;
   double tol;  // Tolerance
-  double c;  // Sparse scaling factor
 } GlmTrainer;
 
 /* trainer type enum */

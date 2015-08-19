@@ -1,276 +1,170 @@
 #include "sag_linesearch.h"
-const static int sparse = 0;
-const static double precision = 1.490116119384765625e-8;
+
 const static int one = 1;
 
-static inline void _sag_linesearch_iteration(GlmTrainer * trainer,
-                                             GlmModel * model,
-                                             Dataset * dataset);
+void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
-/**
- *     Logistic regression stochastic average gradient trainer
- *
- *     @param w(p, 1) weights
- *     @param Xt(p, n) real feature matrix
- *     @param y(n, 1) {-1, 1} target matrix
- *     @param lambda scalar regularization parameters
- *     @param stepSize scalar constant step size
- *     @param iVals(max_iter, 1) sequence of examples to choose
- *     @param d(p, 1) initial approximation of average gradient
- *     @param g(n, 1) previous derivatives of loss
- *     @param covered(n, 1) whether the example has been visited
- *     @param stepSizeType scalar default is 1 to use 1/L, set to 2 to
- *     use 2/(L + n*myu)
- *     @return optimal weights (p, 1)
- */
-SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                      SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType, SEXP family, SEXP tol) {
-  // Initializing protection counter
-  int nprot = 0;
+  /* Unpacking Structs */
 
-  /*======\
-  | Input |
-  \======*/
+  /* Dataset */
+  double *y = dataset->y;
+  double *Xt = dataset->Xt;
+  double *Li = dataset->Li;
 
-  /* Initializing dataset */
-  Dataset train_set = {.Xt = REAL(Xt),
-                       .y = REAL(y),
-                       .iVals = INTEGER(iVals),
-                       .covered = INTEGER(covered),
-                       .nCovered = 0,
-                       .nSamples = INTEGER(GET_DIM(Xt))[1],
-                       .nVars = INTEGER(GET_DIM(Xt))[0],
-                       .sparse = sparse,
-                       .Li = REAL(stepSize)};
-
-  /* Initializing trainer  */
-  GlmTrainer trainer = {.lambda = *REAL(lambda),
-                        .d = REAL(d),
-                        .g = REAL(g),
-                        .iter = 0,
-                        .maxIter = INTEGER(GET_DIM(iVals))[0],
-                        .tol = *REAL(tol),
-                        .stepSizeType = *INTEGER(stepSizeType),
-                        .precision = precision};
-
-  /* Initializing Model */
-  GlmModel model = {.w = REAL(w)};
-
-  /* Choosing family */
-  switch (*INTEGER(family)) {
-    case GAUSSIAN:
-      model.loss = gaussian_loss;
-      model.grad = gaussian_loss_grad;
-      break;
-    case BINOMIAL:
-      model.loss = binomial_loss;
-      model.grad = binomial_loss_grad;
-      break;
-    case EXPONENTIAL:
-      model.loss = exponential_loss;
-      model.grad = exponential_grad;
-      break;
-    case POISSON:
-      model.loss = poisson_loss;
-      model.grad = poisson_loss_grad;
-      break;
-    default:
-      error("Unrecognized glm family");
-  }
-
-  // Mark deals with stepSizeType and xtx as optional arguments. This
-  // makes sense in MATLAB. In R it is simpler to pass the default
-  // argument in R when using .Call rather than use .Extern
-  /* double * xtx = Calloc(train_set.nSamples, double); */
-
-  /*===============\
-  | Error Checking |
-  \===============*/
-  if ( train_set.nVars != INTEGER(GET_DIM(w))[0]) {
-    error("w and Xt must have the same number of rows");
-  }
-  if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
-    error("number of columns of Xt must be the same as the number of rows in y");
-  }
-  if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
-    error("w and d must have the same number of rows");
-  }
-  if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
-    error("w and g must have the same number of rows");
-  }
-  if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
-    error("covered and y must have the same number of rows");
-  }
-  // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
-  /* if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's */
-  /*                   // code alpha is not declared yet. */
-  /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
-  /* } */
-  /* Allocate Memory Needed for Lazy Update */
-  if (sparse) {
-    // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 82
-  }
-
-  for(int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i]!=0) train_set.nCovered++;
-  }
-
-  /* for (int i = 0; i < train_set.nSamples; i++) { */
-  /*   if (sparse) { */
-  /*     // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 103 */
-  /*   } else { */
-  /*     xtx[i] = F77_CALL(ddot)(&train_set.nVars, &Xt[i * train_set.nVars], &one, &Xt[i * train_set.nVars], &one); */
-  /*   } */
-  /* } */
-
-  /*============================\
-  | Stochastic Average Gradient |
-  \============================*/
-  /* for (trainer.iter = 0; trainer.iter  < trainer.maxIter; trainer.iter++) { */
-  /*   trainer.step(&trainer, &model, &train_set); */
-  /* } */
-
-  /* Allocate Memory Needed for lazy update */
-  if (sparse) {
-  // TODO(Ishmael): If (sparse) line 72 in SAG_logistic_BLAS
-  }
-  /* Counting*/
-  for (int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i] != 0) train_set.nCovered++;
-  }
-  //Rprintf("Pre training Li: %f\n", *train_set.Li);
-  double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
-  int stop_condition = 0;
-  while (!stop_condition) {
-    _sag_linesearch_iteration(&trainer, &model, &train_set);
-    //Rprintf("Trainer.iter = %d \n", trainer.iter);
-    trainer.iter++;
-    cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
-    /* if (trainer.iter % 1000 == 0) { */
-    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm); */
-    /* } */
-    stop_condition = (trainer.iter >= trainer.maxIter) || (cost_grad_norm <= trainer.tol);
-    if (stop_condition) {
-      Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter);
-    }
-  }
-  int convergence_code = 0;
-  if (cost_grad_norm > trainer.tol) {
-    warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
-    convergence_code = 1;
-  }
-  //Rprintf("Post training Li: %f\n", *train_set.Li);
-
-  /*=======\
-  | Return |
-  \=======*/
-  /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), model.w, train_set.nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
-  // TODO(Ishmael): check g dimesionality
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
-  SEXP stepSize_return = PROTECT(allocVector(REALSXP, 1)); nprot++;
-  *REAL(stepSize_return) = *train_set.Li;
-  SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(convergence_code_return) = convergence_code;
-
-  /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, stepSize_return, convergence_code_return); // in utils.h
-  /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "stepSize","convergence_code");
-  setAttrib(results, R_NamesSymbol, results_names);
-
-  UNPROTECT(nprot);
-  return results;
-}
-
-
-static inline void _sag_linesearch_iteration(GlmTrainer * trainer,
-                                             GlmModel * model,
-                                             Dataset * dataset) {
-
+  /* Dimensions */
   int nVars = dataset->nVars;
-  double * w = model->w;
-  double * Xt = dataset->Xt;
-  double * y = dataset->y;
-  double * d = trainer->d;
-  double * g = trainer->g;
-  double * Li = dataset-> Li;
+  int nSamples = dataset->nSamples;
 
-  /* Select next training example */
-  int i = dataset->iVals[trainer->iter] - 1;
-  if (dataset->sparse && trainer->iter > 0) {
-    //TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 119
-  }
-  /* Compute derivative of loss */
-  double innerProd = 0;
-  if (dataset->sparse) {
-    // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 132
-  } else {
-    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
-  }
+  /* Sampling */
+  int *iVals = dataset->iVals;
+  int *covered = dataset->covered;
+  double *nCovered = &dataset->nCovered;
+  /* Training parameters */
+  int maxIter = trainer->maxIter;
+  double lambda = trainer->lambda;
+  double alpha = trainer->alpha;
+  double precision = trainer->precision;
+  int stepSizeType = trainer->stepSizeType;
 
-  double grad = model->grad(y[i], innerProd);
+  /* Model */
+  double *w = model->w;
+  loss_fun loss_function = model->loss;
+  loss_grad_fun grad_function = model->grad;
 
-  /* Update Direction */
-  double scaling = 0;
-  if (dataset->sparse) {
-    // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 144
-  } else {
-    scaling = grad - g[i];
-    F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
-  }
-  /* Store derivative of loss */
-  g[i] = grad;
-  /* Update the number of examples that we have seen */
-  if (dataset->covered[i] == 0) {
-    dataset->covered[i] = 1; dataset->nCovered++;
+  /* Sparse related variables */
+  int sparse = dataset->sparse;
+  int *jc = NULL, *ir = NULL;
+  int *lastVisited = NULL;
+  double *cumSum = NULL;
+  if (sparse) {
+    /* Sparse indices*/
+    jc = dataset->jc;
+    ir = dataset->ir;
+    lastVisited = Calloc(nVars, int);
+    cumSum = Calloc(maxIter, double);
   }
 
-  /* Line-search for Li */
-  double fi = model->loss(y[i], innerProd);
-  /* Compute f_new as the function value obtained by taking
-   * a step size of 1/Li in the gradient direction */
-  double wtx = innerProd;
-  double xtx = F77_CALL(ddot)(&dataset->nVars, &Xt[i * dataset->nVars], &one, &Xt[i * dataset->nVars], &one);
-  double gg = grad * grad * xtx;
-  innerProd = wtx - xtx * grad/(*Li);
+  /* Approximate gradients*/
+  double *g = trainer->g;
+  double *d = trainer->d;
 
-  double fi_new = model->loss(y[i], innerProd);
-  while ((gg > trainer->precision) && (fi_new > (fi - gg/(2 * (*Li))))) {
-    *Li *= 2;
-    innerProd = wtx - xtx * grad/(*Li);
-    fi_new = model->loss(y[i], innerProd);
+  /* Training variables*/
+  int i = 0;
+  double c = 1.0;
+  double scaling = 0, innerProd = 0, grad = 0;
+  double fi = 0, fi_new = 0;
+  double gg = 0, wtx = 0, xtx = 0;
+
+  for (int k = 0; k < maxIter; k++) {
+    /* Select next training example */
+    i = iVals[k] - 1;
+
+    /* Compute current values of needed parameters */
+    if (sparse && k > 0) {
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
+        if (lastVisited[ir[j]] == 0) {
+          w[ir[j]] -= d[ir[j]] * cumSum[k - 1];
+        } else {
+          w[ir[j]] -=
+              d[ir[j]] * (cumSum[k - 1] - cumSum[lastVisited[ir[j]] - 1]);
+        }
+        lastVisited[ir[j]] = k;
+      }
+    }
+
+    /* Compute derivative of loss */
+    if (sparse) {
+      innerProd = 0;
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
+        innerProd += w[ir[j]] * Xt[j];
+      }
+      innerProd *= c;
+    } else {
+      innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
+    }
+
+    grad = grad_function(y[i], innerProd);
+
+    /* Update direction */
+    if (sparse) {
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
+        d[ir[j]] += Xt[j] * (grad - g[i]);
+      }
+    } else {
+      scaling = grad - g[i];
+      F77_CALL(daxpy)(&nVars, &scaling, &Xt[nVars * i], &one, d, &one);
+    }
+
+    /* Store derivative of loss */
+    g[i] = grad;
+
+    /* Update the number of examples that we have seen */
+    if (covered[i] == 0) {
+      covered[i] = 1;
+      (*nCovered)++;
+    }
+
+    /* Line-search for Li */
+    fi = loss_function(y[i], innerProd);
+    /* Compute f_new as the function value obtained by taking
+     * a step size of 1/Li in the gradient direction */
+    wtx = innerProd;
+    if (sparse) {
+      xtx = 0;
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
+        xtx += Xt[j] * Xt[j];
+      }
+    } else {
+      xtx = F77_CALL(ddot)(&nVars, &Xt[nVars * i], &one, &Xt[nVars * i], &one);
+    }
+    gg = grad * grad * xtx;
+    innerProd = wtx - xtx * grad / (*Li);
+    fi_new = loss_function(y[i], innerProd);
+    /*printf("fi = %e, fi_new = %e, gg = %e\n",fi,fi_new,gg);*/
+    while (gg > precision && fi_new > fi - gg / (2 * (*Li))) {
+      /*printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li =
+       * %e)\n",k+1,fi,fi_new,1/(*Li));*/
+      *Li *= 2;
+      innerProd = wtx - xtx * grad / (*Li);
+      fi_new = loss_function(y[i], innerProd);
+    }
+
+    /* Compute step size */
+    if (stepSizeType == 1) {
+      alpha = 1 / (*Li + lambda);
+    } else {
+      alpha = 2 / (*Li + (nSamples + 1) * lambda);
+    }
+    /* Update parameters */
+    if (sparse) {
+      c *= 1 - alpha * lambda;
+      if (k == 0) {
+        cumSum[0] = alpha / (c * *nCovered);
+      } else {
+        cumSum[k] = cumSum[k - 1] + alpha / (c * *nCovered);
+      }
+    } else {
+      scaling = 1 - alpha * lambda;
+      F77_CALL(dscal)(&nVars, &scaling, w, &one);
+      scaling = -alpha / *nCovered;
+      F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
+    }
+
+    /* Decrease value of Lipschitz constant */
+    *Li *= pow(2.0, -1.0 / nSamples);
   }
 
-  /* Compute step size */
-  if (trainer->stepSizeType == 1) {
-    trainer->alpha = 1/(*Li + trainer->lambda);
-  } else {
-    trainer->alpha = 2/(*Li + (dataset->nSamples + 1) * trainer->lambda);
-  }
-  /* Update Parameters */
-  if (dataset->sparse) {
-    // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 187
-  } else {
-    scaling = 1 - trainer->alpha * trainer->lambda;
+  if (sparse) {
+    for (int j = 0; j < nVars; j++) {
+      if (lastVisited[j] == 0) {
+        w[j] -= d[j] * cumSum[maxIter - 1];
+      } else {
+        w[j] -= d[j] * (cumSum[maxIter - 1] - cumSum[lastVisited[j] - 1]);
+      }
+    }
+    scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    scaling = -(trainer->alpha)/(dataset->nCovered);
-    F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
+    Free(lastVisited);
+    Free(cumSum);
   }
-
-  /* Decrease value of Lipschitz constant */
-  *Li *= pow(2.0, -1.0/dataset->nSamples);
 }
-
-  /* if (sparse) { */
-  /*   // TODO(Ishmael):  SAGlineSearch_logistic_BLAS.c line 208 */
-  /* } */

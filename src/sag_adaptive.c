@@ -1,413 +1,253 @@
 #include "sag_adaptive.h"
-// TODO(Ishmael): Consider using R math functions
-const static int DEBUG = 0;
-const static int sparse = 0;
+
 const static int one = 1;
-const static double precision = 1.490116119384765625e-8;
 
+void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
-static inline void _sag_adaptive_iteration(GlmTrainer * trainer,
-                                           GlmModel * model,
-                                           Dataset * dataset);
+  /* Unpacking Structs */
 
-static inline int sample_index(GlmTrainer * trainer,
-                               Dataset * dataset);
+  /* Dataset */
+  double *y = dataset->y;
+  double *Xt = dataset->Xt;
+  double *Li = dataset->Li;
+  double *Lmax = dataset->Lmax;
+  int increasing = dataset->increasing;
 
-/**
- *   Stochastic Average Gradient Descent with line-search and adaptive
- *   lipschitz sampling
- *
- *   @param w_s (p, 1) real weights
- *   @param Xt_s (p, n) real features Matrix
- *   @param y_s (m, 1) {-1, 1} targets Matrix
- *   @param lambda_s scalar regularization parameter
- *   @param Lmax_s scalar initial approximation of global Lipschitz constants
- *   @param Li_s (n, 1) initial approximation of inidividual lipschitz constants
- *   @param randVals (maxiter, 2) - sequence of random values for the
- *   algorithm to use
- *   @param d_s (p, 1) initial approximation of average gradient
- *   @param g_s (n, 1) previousd derivatives of loss
- *
- *   @param covered_s  d(p,1) initial approximation of average gradient (should be sum of previous gradients)
- *   @param increasing_s  scalar default is 1 to allow the Lipscthiz constants to increase, set to 0 to only allow them to decrease
- *
- *   @return optimal weights (p, 1)
- */
-SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP Lmax, SEXP Li, SEXP randVals, SEXP d,
-                    SEXP g, SEXP covered, SEXP increasing, SEXP family,
-                    SEXP tol) {
-  // initializing protection counter
-  int nprot = 0;
-  /* Variables */
-  // TODO(Ishmael): This is messy. Clean it.
-  // int temp;
-  // int  * lastVisited;
-  // int i, j;
-  // size_t * jc,* ir;
+  /* Dimensions */
+  int nVars = dataset->nVars;
+  int nSamples = dataset->nSamples;
 
-  // double c=1;
-  // double * cumSum;
+  /* Sampling */
+  double *randVals = dataset->randVals;
+  int *covered = dataset->covered;
+  double * unCoveredMatrix = dataset->unCoveredMatrix;
+  double * LiMatrix = dataset->LiMatrix;
+  double *nDescendants = dataset->nDescendants;
+  double *nCovered = &dataset->nCovered;
+  double *Lmean = &dataset->Lmean;
+  int nLevels = dataset->nLevels;
+  int nextpow2 = dataset->nextpow2;
 
-  /*======\
-  | Input |
-  \======*/
+  /* Training parameters */
+  int maxIter = trainer->maxIter;
+  double lambda = trainer->lambda;
+  double alpha = trainer->alpha;
+  double precision = trainer->precision;
 
-  /* Initializing dataset */
-  Dataset train_set = {.Xt = REAL(Xt),
-                       .y = REAL(y),
-                       .randVals = REAL(randVals),
-                       .nSamples = INTEGER(GET_DIM(Xt))[1],
-                       .nVars = INTEGER(GET_DIM(Xt))[0],
-                       .Lmax = REAL(Lmax),
-                       .Li = REAL(Li),
-                       .covered = INTEGER(covered),
-                       .increasing = *INTEGER(increasing),
-                       .sparse = sparse};
+  /* Model */
+  double *w = model->w;
+  loss_fun loss_function = model->loss;
+  loss_grad_fun grad_fun = model->grad;
 
-  /* Initialzing trainer */
-  GlmTrainer trainer = {.lambda = *REAL(lambda),
-                        .d = REAL(d),
-                        .g = REAL(g),
-                        .iter = 0,
-                        .maxIter = INTEGER(GET_DIM(randVals))[0],
-                        .precision = precision,
-                        .tol = *REAL(tol)};
-
-   /* Initializing Model */
-   GlmModel model = {.w = REAL(w)};
-   /* Choosing family */
-   switch (*INTEGER(family)) {
-   case GAUSSIAN:
-     model.loss = gaussian_loss;
-     model.grad = gaussian_loss_grad;
-     break;
-   case BINOMIAL:
-     model.loss = binomial_loss;
-     model.grad = binomial_loss_grad;
-     break;
-   case EXPONENTIAL:
-     model.loss = exponential_loss;
-     model.grad = exponential_grad;
-     break;
-   case POISSON:
-     model.loss = poisson_loss;
-     model.grad = poisson_loss_grad;
-     break;
-   default:
-     error("Unrecognized glm family");
-   }
-
-  /* Error Checking */
-  if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
-    error("w and Xt must have the same number of rows");
+  /* Sparse related variables */
+  int sparse = dataset->sparse;
+  int *jc = NULL, *ir = NULL;
+  int *lastVisited = NULL;
+  double *cumSum = NULL;
+  if (sparse) {
+    /* Sparce indices*/
+    jc = dataset->jc;
+    ir = dataset->ir;
+    lastVisited = Calloc(nVars, int);
+    cumSum = Calloc(maxIter, double);
   }
-  if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
-    error("number of columns of Xt must be the same as the number of rows in y");
-  }
-  if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
-    error("w and d must have the same number of rows");
-  }
-  if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
-    error("w and g must have the same number of rows");
-  }
-  if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
-    error("covered and y must hvae the same number of rows");
-  }
-  // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 78
-  /* if (sparse && alpha * lambda == 1) { */
-  /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
-  /* } */
-  /*============================\
-  | Stochastic Average Gradient |
-  \============================*/
-  /* Allocate memory needed for lazy updates*/
-  if (train_set.sparse) {
-    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS line 89
-  }
+  /* Approximate gradients*/
+  double *g = trainer->g;
+  double *d = trainer->d;
 
-  /* Compute mean of covered variables */
-  double Lmean = 0;
-  double nCovered = 0;
-  for(int i = 0; i < train_set.nSamples; i++) {
-    if (train_set.covered[i] != 0) {
-      nCovered++;
-      Lmean += train_set.Li[i];
-    }
-  }
+  /* Training variables*/
+  int i = 0, ind = 0;
+  double offset = 0;
+  double c = 1.0;
+  double scaling = 0, innerProd = 0, grad = 0;
+  double fi = 0, fi_new = 0;
+  double Li_old = 0;
+  double gg = 0, wtx = 0, xtx = 0;
+  double u = 0, z = 0, Z = 0;
 
-  if(nCovered > 0) {
-    Lmean /= nCovered;
-  }
-
-  /* Do the O(n log n) initialization of the data structures
-     will allow sampling in O(log(n)) time */
-  int nextpow2 = pow(2, ceil(log2(train_set.nSamples)/log2(2)));
-  int nLevels = 1 + (int)ceil(log2(train_set.nSamples));
-  if (DEBUG) Rprintf("next power of 2 is: %d\n",nextpow2);
-  if (DEBUG) Rprintf("nLevels = %d\n",nLevels);
-  /* Counts number of descendents in tree */
-  double * nDescendants = Calloc(nextpow2 * nLevels, double);
-  /* Counts number of descenents that are still uncovered */
-  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
-  /* Sums Lipschitz constant of loss over descendants */
-  double * LiMatrix = Calloc(nextpow2 * nLevels, double);
-  for (int i = 0; i < train_set.nSamples; i++) {
-    nDescendants[i] = 1;
-    if (train_set.covered[i]) {
-        LiMatrix[i] = train_set.Li[i];
+  for (int k = 0; k < maxIter; k++) {
+    /* Select next training example */
+    offset = 0;
+    i = 0;
+    u = randVals[k + maxIter];
+    if (randVals[k] < (double)(nSamples - *nCovered) / (double)nSamples) {
+      /* Sample fron uncovered guys */
+      Z = unCoveredMatrix[nextpow2 * (nLevels - 1)];
+      for (int level = nLevels - 1; level >= 0; level--) {
+        z = offset + unCoveredMatrix[2 * i + nextpow2 * level];
+        if (u < z / Z)
+          i = 2 * i;
+        else {
+          offset = z;
+          i = 2 * i + 1;
+        }
+      }
     } else {
-      unCoveredMatrix[i] = 1;
+      /* Sample from covered guys according to estimate of Lipschitz constant */
+      Z = LiMatrix[nextpow2 * (nLevels - 1)] +
+          (*Lmean + 2 * lambda) * (nDescendants[nextpow2 * (nLevels - 1)] -
+                                  unCoveredMatrix[nextpow2 * (nLevels - 1)]);
+      for (int level = nLevels - 1; level >= 0; level--) {
+        z = offset + LiMatrix[2 * i + nextpow2 * level] +
+            (*Lmean + 2 * lambda) * (nDescendants[2 * i + nextpow2 * level] -
+                                    unCoveredMatrix[2 * i + nextpow2 * level]);
+        if (u < z / Z) {
+          i = 2 * i;
+        } else {
+          offset = z;
+          i = 2 * i + 1;
+        }
+      }
+      /*printf("i = %d\n",i);*/
     }
-  }
 
-  int levelMax = nextpow2;
-  for (int level = 1; level < nLevels; level++) {
-    levelMax = levelMax/2;
-    for (int i = 0; i < levelMax; i++) {
-      nDescendants[i + nextpow2 * level] = nDescendants[ 2 * i + nextpow2 * (level - 1)] +
-                                           nDescendants[ 2 * i + 1 + nextpow2 * (level - 1)];
-      LiMatrix[i + nextpow2 * level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
-                                       LiMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
-      unCoveredMatrix[i + nextpow2 * level] = unCoveredMatrix[2 * i + nextpow2 * (level - 1)] +
-                                              unCoveredMatrix[2 * i + 1 + nextpow2 * (level - 1)];
+    /* Compute current values of needed parameters */
+    if (sparse && k > 0) {
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
+        if (lastVisited[ir[j]] == 0) {
+          w[ir[j]] -= d[ir[j]] * cumSum[k - 1];
+        } else {
+          w[ir[j]] -=
+              d[ir[j]] * (cumSum[k - 1] - cumSum[lastVisited[ir[j]] - 1]);
+        }
+        lastVisited[ir[j]] = k;
+      }
     }
-  }
 
-  /* Continuing dataset initialisation */
-  train_set.Lmean = Lmean;
-  train_set.nCovered = nCovered;
-  train_set.nLevels = nLevels;
-  train_set.nextpow2 = nextpow2;
-  train_set.nDescendants = nDescendants;
-  train_set.unCoveredMatrix = unCoveredMatrix;
-  train_set.LiMatrix = LiMatrix;
-
-  //double cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
-  double cost_grad_norm = 1.0;
-  int stop_condition = 0;
-  while (!stop_condition) {
-    _sag_adaptive_iteration(&trainer, &model, &train_set);
-    trainer.iter++;
-    //cost_grad_norm = get_cost_grad_norm(&trainer, &model, &train_set);
-    cost_grad_norm = 1.0;
-    /* if (trainer.iter % 1000 == 0) { */
-    /*   Rprintf("Norm of approximate gradient at iteration %d/%d: \t %f \n", trainer.iter, trainer.maxIter, cost_grad_norm); */
-    /* } */
-    stop_condition = (trainer.iter >= trainer.maxIter) || (cost_grad_norm <= trainer.tol);
-    if (stop_condition) {
-      Rprintf("Stop condition is satisfied @ iter: %d \n", trainer.iter);
+    /* Compute derivative of loss */
+    innerProd = 0;
+    if (sparse) {
+      for (int j = jc[i]; j < jc[i + 1]; j++)
+        innerProd += w[ir[j]] * Xt[j];
+      innerProd *= c;
+    } else {
+      innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     }
-  }
-  int convergence_code = 0;
-  if (cost_grad_norm > trainer.tol) {
-    warning("(LS) Optmisation stopped before convergence: %d/%d\n", trainer.iter, trainer.maxIter);
-    convergence_code = 1;
+    grad = grad_fun(y[i], innerProd);
+
+    /* Update direction */
+    if (sparse) {
+      for (int j = jc[i]; j < jc[i + 1]; j++)
+        d[ir[j]] += Xt[j] * (grad - g[i]);
+    } else {
+      scaling = grad - g[i];
+      F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
+    }
+
+    /* Store derivative of loss */
+    g[i] = grad;
+
+    /* Line-search for Li */
+    Li_old = Li[i];
+    if (increasing && covered[i])
+      Li[i] /= 2;
+    fi = loss_function(y[i], innerProd);
+    /* Compute f_new as the function value obtained by taking
+     * a step size of 1/Li in the gradient direction */
+    wtx = innerProd;
+    xtx = 0;
+    if (sparse) {
+      for(int j=jc[i];j<jc[i+1];j++)
+        xtx += Xt[j]*Xt[j];
+    }
+    else {
+      xtx = F77_CALL(ddot)(&nVars, &Xt[nVars * i], &one, &Xt[nVars * i], &one);
+    }
+    gg = grad * grad * xtx;
+    innerProd = wtx - xtx * grad / Li[i];
+    fi_new = loss_function(y[i], innerProd);
+    /*printf("fi = %e, fi_new = %e, gg = %e\n",fi,fi_new,gg);*/
+    while (gg > precision && fi_new > fi - gg / (2 * (Li[i]))) {
+      /*printf("Lipschitz Backtracking (k = %d, fi = %e, fi_new = %e, 1/Li =
+       * %e)\n",k+1,fi,fi_new,1/(Li[i]));*/
+      Li[i] *= 2;
+      innerProd = wtx - xtx * grad / Li[i];
+      fi_new = loss_function(y[i], innerProd);
+    }
+
+    if (Li[i] > *Lmax)
+      *Lmax = Li[i];
+
+    /* Update the number of examples that we have seen */
+    if (covered[i] == 0) {
+      covered[i] = 1;
+      (*nCovered)++;
+      *Lmean = *Lmean * ((double)(*nCovered - 1) / (double)*nCovered) +
+              Li[i] / (double)*nCovered;
+
+      /* Update unCoveredMatrix so we don't sample this guy when looking for a
+       * new guy */
+      ind = i;
+      for (int level = 0; level < nLevels; level++) {
+        unCoveredMatrix[ind + nextpow2 * level] -= 1;
+        ind = ind / 2;
+      }
+      /* Update LiMatrix so we sample this guy proportional to its Lipschitz
+       * constant*/
+      ind = i;
+      for (int level = 0; level < nLevels; level++) {
+        LiMatrix[ind + nextpow2 * level] += Li[i];
+        ind = ind / 2;
+      }
+    } else if (Li[i] != Li_old) {
+      *Lmean = *Lmean + (Li[i] - Li_old) / (double)*nCovered;
+      /* Update LiMatrix with the new estimate of the Lipscitz constant */
+      ind = i;
+      for (int level = 0; level < nLevels; level++) {
+        LiMatrix[ind + nextpow2 * level] += (Li[i] - Li_old);
+        ind = ind / 2;
+      }
+    }
+
+    /*for(ind=0;ind<nextpow2;ind++) {
+        for(j=0;j<nLevels;j++) {
+            printf("%f ",LiMatrix[ind + nextpow2*j]);
+        }
+        printf("\n");
+        }
+    */
+
+    /* Compute step size */
+    alpha =
+        ((double)(nSamples - *nCovered) / (double)nSamples) / (*Lmax + lambda) +
+        ((double)*nCovered / (double)nSamples) *
+            (1 / (2 * (*Lmax + lambda)) + 1 / (2 * (*Lmean + lambda)));
+
+    /* Update parameters */
+    if (sparse) {
+      c *= 1 - alpha * lambda;
+      if (k == 0) {
+        cumSum[0] = alpha / (c * *nCovered);
+      } else {
+        cumSum[k] = cumSum[k - 1] + alpha / (c * *nCovered);
+      }
+    } else {
+      scaling = 1 - alpha * trainer->lambda;
+      F77_CALL(dscal)(&dataset->nVars, &scaling, w, &one);
+      scaling = -alpha/dataset->nCovered;
+      F77_CALL(daxpy)(&dataset->nVars, &scaling, d, &one, w, &one);
+    }
+
+    /* Decrease value of max Lipschitz constant */
+    if (increasing)
+      *Lmax *= pow(2.0, -1.0 / nSamples);
   }
 
-  if (train_set.sparse) {
-    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 315
+  if (sparse) {
+    for (int j = 0; j < nVars; j++) {
+      if (lastVisited[j] == 0) {
+        w[j] -= d[j] * cumSum[maxIter - 1];
+      } else {
+        w[j] -= d[j] * (cumSum[maxIter - 1] - cumSum[lastVisited[j] - 1]);
+      }
+    }
+    scaling = c;
+    F77_CALL(dscal)(&nVars, &scaling, w, &one);
+    Free(lastVisited);
+    Free(cumSum);
   }
-
-  /* Freeing allocated variables */
   Free(nDescendants);
   Free(unCoveredMatrix);
   Free(LiMatrix);
-
-  /*=======\
-  | Return |
-  \=======*/
-
-  /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), model.w, train_set.nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
-
-  /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 4)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return); // in utils.h
-  /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 4)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered");
-  setAttrib(results, R_NamesSymbol, results_names);
-
-  UNPROTECT(nprot);
-  return results;
 }
 
-static inline void _sag_adaptive_iteration(GlmTrainer * trainer,
-                                           GlmModel * model,
-                                           Dataset * dataset) {
-  double * w = model->w;
-  double * Xt = dataset->Xt;
-  double * y = dataset->y;
-  double * d = trainer->d;
-  double * g = trainer->g;
-  double * Li = dataset->Li;
-  double * Lmax = dataset->Lmax;
-
-  int k = trainer->iter;
-  int * covered = dataset->covered;
-
-  double * unCoveredMatrix = dataset->unCoveredMatrix;
-  double * LiMatrix = dataset->LiMatrix;
-
-  /* Adaptively sample current index*/
-  int i = sample_index(trainer, dataset);
-  /* Compute current values of needed parameters */
-
-  if (dataset->sparse) {
-    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 192
-  }
-
-  /* Compute derivative of loss */
-  double innerProd = 0;
-  if (dataset->sparse) {
-    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 206
-  } else {
-    innerProd = F77_CALL(ddot)(&dataset->nVars, w, &one, &Xt[dataset->nVars * i], &one);
-  }
-
-  double grad = model->grad(y[i], innerProd);
-
-  /* Update direction */
-  double scaling;
-  if (dataset->sparse) {
-    // TODO(Ishmael):  SAG_LipschitzLS_logistic_BLAS.c line 216
-  } else {
-    scaling = grad - g[i];
-    F77_CALL(daxpy)(&dataset->nVars, &scaling, &Xt[i * dataset->nVars], &one, d, &one);
-  }
-  /* Store derivative of loss */
-  g[i] = grad;
-
-  /* Line-search for Li */
-  double Li_old = Li[i];
-  if(dataset->increasing && covered[i]) Li[i] /= 2;
-  double fi = model->loss(y[i], innerProd);
-
-  /* Compute f_new as the function value obtained by taking
-   * a step size of 1/Li in the gradient direction */
-  double wtx = innerProd;
-  double xtx = F77_CALL(ddot)(&dataset->nVars, &Xt[i * dataset->nVars], &one, &Xt[i * dataset->nVars], &one);
-  double gg = grad * grad * xtx;
-  innerProd = wtx - xtx * grad/Li[i];
-
-  double fi_new = model->loss(y[i], innerProd);
-  if(DEBUG) Rprintf("fi = %e, fi_new = %e, gg = %e", fi, fi_new, gg);
-  while (gg > trainer->precision && fi_new > fi - gg/(2*(Li[i]))) {
-    if (DEBUG) {  Rprintf("Lipschitz Backtracking (k = %d, fi = %e, * fi_new = %e, 1/Li = %e)", k +1 ,
-                          fi, fi_new, 1/(Li[i]));
-    }
-    Li[i] *= 2;
-    innerProd = wtx - xtx * grad/Li[i];
-    fi_new = model->loss(y[i], innerProd);
-  }
-  if(Li[i] > *Lmax) *Lmax = Li[i];
-
-  /* Update the number of examples that we have seen */
-  int ind;
-  if (covered[i] == 0) {
-    covered[i] = 1;
-    dataset->nCovered++;
-    dataset->Lmean = dataset->Lmean *
-      ((double)(dataset->nCovered - 1)/(double)dataset->nCovered) +
-      Li[i]/(double)dataset->nCovered;
-
-    /* Update unCoveredMatrix so we don't sample this guy when looking for a new guy */
-    ind = i;
-    for(int level = 0; level< dataset->nLevels; level++) {
-      unCoveredMatrix[ind + dataset->nextpow2 * level] -= 1;
-      ind = ind/2;
-    }
-    /* Update LiMatrix so we sample this guy proportional to its Lipschitz constant*/
-    ind = i;
-    for(int level = 0; level < dataset->nLevels; level++) {
-      LiMatrix[ind + dataset->nextpow2 * level] += Li[i];
-      ind = ind/2;
-    }
-  } else if (Li[i] != Li_old) {
-    dataset->Lmean = dataset->Lmean + (Li[i] - Li_old)/(double)dataset->nCovered;
-    /* Update LiMatrix with the new estimate of the Lipscitz constant */
-    ind = i;
-    for(int level = 0; level < dataset->nLevels; level++) {
-      LiMatrix[ind + dataset->nextpow2 * level] += (Li[i] - Li_old);
-      ind = ind/2;
-    }
-  }
-  if (DEBUG) {
-    for(int ind = 0; ind < dataset->nextpow2; ind++) {
-      for(int j = 0;j < dataset->nLevels; j++) {
-        Rprintf("%f ", LiMatrix[ind + dataset->nextpow2 * j]);
-      }
-      //Rprintf("\n");
-    }
-  }
-  /* Compute step size */
-  double alpha = ((double)(dataset->nSamples - dataset->nCovered)/(double)dataset->nSamples)/(*Lmax + trainer->lambda) +
-                 ((double)dataset->nCovered/(double)dataset->nSamples) * (1/(2*(*Lmax + trainer->lambda)) +
-                                                        1/(2*(dataset->Lmean + trainer->lambda)));
-
-  /* Update parameters */
-  if (dataset->sparse) {
-    // TODO(Ishmael): SAG_LipschitzLS_logistic_BLAS.c line 294
-  } else {
-    scaling = 1 - alpha * trainer->lambda;
-    F77_CALL(dscal)(&dataset->nVars, &scaling, w, &one);
-    scaling = -alpha/dataset->nCovered;
-    F77_CALL(daxpy)(&dataset->nVars, &scaling, d, &one, w, &one);
-  }
-  /* Decrease value of max Lipschitz constant */
-  if (dataset->increasing) {
-    *Lmax *= pow(2.0, -1.0/dataset->nSamples);
-  }
-
-}
-
-static inline int sample_index(GlmTrainer * trainer, Dataset * dataset) {
-
-  /* Select next training example */
-  double offset = 0;
-  int i = 0;
-  double u = dataset->randVals[trainer->iter + trainer->maxIter];
-
-  double covered_prop = (double)(dataset->nSamples - dataset->nCovered)/(double)dataset->nSamples;
-  double z, Z;
-  if (dataset->randVals[trainer->iter] < covered_prop) {
-    /* Sample fron uncovered guys */
-    Z = dataset->unCoveredMatrix[dataset->nextpow2 * (dataset->nLevels - 1)];
-    for(int level=dataset->nLevels - 1;level >= 0; level--) {
-      z = offset + dataset->unCoveredMatrix[2 * i + dataset->nextpow2 * level];
-      if(u < z/Z) {
-        i = 2 * i;
-      } else {
-        offset = z;
-        i = 2 * i + 1;
-      }
-    }
-  } else {
-    /* Sample from covered guys according to estimate of Lipschitz constant */
-    Z = dataset->LiMatrix[dataset->nextpow2 * (dataset->nLevels - 1)] +
-        (dataset->Lmean + 2 * trainer->lambda) *
-        (dataset->nDescendants[dataset->nextpow2 * (dataset->nLevels - 1)] -
-         dataset->unCoveredMatrix[dataset->nextpow2 * (dataset->nLevels - 1)]);
-    for (int level = dataset->nLevels - 1; level  >= 0; level--) {
-      z = offset + dataset->LiMatrix[2 * i + dataset->nextpow2 * level] +
-          (dataset->Lmean + 2 * trainer->lambda) *
-          (dataset->nDescendants[2 * i + dataset->nextpow2 * level] -
-           dataset->unCoveredMatrix[2 * i + dataset->nextpow2 * level]);
-      if(u < z/Z) {
-        i = 2 * i;
-      } else {
-        offset = z;
-        i = 2 * i + 1;
-      }
-    }
-  }
-  return i;
-}

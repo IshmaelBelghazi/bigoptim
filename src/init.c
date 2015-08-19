@@ -1,15 +1,16 @@
 #include <R.h>
 #include "Matrix.h"
+/* ENTRY POINTS -- START */
+#include "entrypoint-glm.h"
+#include "entrypoint-sag_constant.h"
+#include "entrypoint-sag_linesearch.h"
+#include "entrypoint-sag_adaptive.h"
+/* ENTRY POINTS -- END */
 
-#include "sag_glm-entry-point.h"
-#include "sag_constant.h"
-#include "sag_linesearch.h"
-#include "sag_adaptive.h"
-
-/* TEMPORTARY -- STARTS */
+/* TEMPORARY -- START */
 #include "sparse_test.h"
 #include "sag_constant_marks.h"
-/* TEMPORTARY -- ENDS */
+/* TEMPORTARY -- END */
 #include <R_ext/Rdynload.h>
 
 /** utitlity macro in registering native routines */
@@ -27,8 +28,8 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
   CALLDEF(C_sag_constant, 12),
-  CALLDEF(C_sag_linesearch, 12),
-  CALLDEF(C_sag_adaptive, 13),
+  CALLDEF(C_sag_linesearch, 13),
+  CALLDEF(C_sag_adaptive, 14),
   /* TEMPORARY -- STARTS*/
   CALLDEF(C_sparse_test, 1),
   CALLDEF(C_sag_constant_mark, 9),
