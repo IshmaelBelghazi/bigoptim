@@ -62,11 +62,11 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
   switch(fit_alg,
          constant={
            if (is.null(stepSize)) {
-             Lmax <- 0.25 * max(rowSums(X^2)) + lambda
+             Lmax <- 0.25 * max(Matrix::rowSums(X^2)) + lambda
              stepSize <- 1/Lmax
            }
            ## Calling C function
-           sag_fit <- .Call("C_sag_constant", w, t(X), y, lambda, stepSize,
+           sag_fit <- .Call("C_sag_constant", w, Matrix::t(X), y, lambda, stepSize,
                             iVals, d, g, covered, as.integer(model_id), tol,
                             as.integer(sparse))
          },
@@ -76,10 +76,9 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
              stepSize <- 1
            }
            ## Calling C function
-           sag_fit <- .Call("C_sag_linesearch", w, t(X), y, lambda, stepSize, iVals, d, g, covered,
+           sag_fit <- .Call("C_sag_linesearch", w, Matrix::t(X), y, lambda, stepSize, iVals, d, g, covered,
                             as.integer(stepSizeType), as.integer(model_id), tol,
                             as.integer(sparse))
-
          },
          adaptive={        
            if (is.null(Lmax)) {
@@ -94,7 +93,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
              randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
            }
            
-           sag_fit <- .Call("C_sag_adaptive", w, t(X), y, lambda,
+           sag_fit <- .Call("C_sag_adaptive", w, Matrix::t(X), y, lambda,
                             Lmax, Li, randVals,
                             d, g, covered, increasing, as.integer(model_id), tol,
                             as.integer(sparse))

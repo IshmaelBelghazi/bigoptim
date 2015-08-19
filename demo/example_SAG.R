@@ -1,3 +1,4 @@
+library(Matrix)
 data(rcv1_train)
 X <- rcv1_train$X
 X <- cBind(rep(1, NROW(X), X), X)
