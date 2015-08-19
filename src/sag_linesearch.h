@@ -9,6 +9,13 @@
 #include "trainers.h"
 #include "glm_models.h"
 
-void _sag_linesearch(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
-
+/* Interface */
+void sag_linesearch(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
+/* Core */
+void _sag_linesearch(double * w, double * Xt, double * y, double lambda,
+                     double alpha, int stepSizeType, double precision, double * Li,
+                     double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
+                     int * iVals, int * covered, double * nCovered, int nVars, int nSamples,
+                     int sparse, int * ir, int * jc, int * lastVisited,
+                     double * cumSum, int maxIter, double tol);
 #endif /* SAG_LINESEARCH_H_ */

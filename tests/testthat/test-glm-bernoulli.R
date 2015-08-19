@@ -6,13 +6,13 @@ context("GLM -- BERNOULLI")
 #####################################################
 ## A.1 - approximate gradient is small on           # 
 ##       empirical data.                            #
-## A.1 - Real Gradient is small on empirical data.  #
+## A.2 - Real Gradient is small on empirical data.  #
 #####################################################
 ## B Simulated Data                                 #
 #####################################################
 ## B.1- approximate gradient is small on            #
 ##       simulated data.                            #
-## B.1 - Real Gradient is small on simulated data.  #
+## B.2 - Real Gradient is small on simulated data.  #
 #####################################################
 ######################
 ## Setting up Tests ##
@@ -26,20 +26,18 @@ algs <- list(constant="constant",
 ## Data
 ## Empirical data
 data(covtype.libsvm)
-dataset <- list()
-dataset$y <- matrix(covtype.libsvm$y, nrow=NROW(covtype.libsvm$y), ncol=1)
-dataset$y[dataset$y == 2] <- -1
-dataset$X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
-sample_size <- NROW(dataset$X)
+empr_data <- list()
+empr_data$y <- matrix(covtype.libsvm$y, nrow=NROW(covtype.libsvm$y), ncol=1)
+empr_data$y[empr_data$y == 2] <- -1
+empr_data$X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
+sample_size <- NROW(empr_data$X)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 0.00001  ## Stop training when norm of approximate gradient is smaller than tol
+tol <- 1e-04  ## Stop training when norm of approximate gradient is smaller than tol
 maxiter <- sample_size * 10
 lambda <- 1/sample_size
 ## A. Empirical Data tests
-## Subsetting empirical data
-empr_data <- dataset
 ## Fitting empirical data with SAG
 sag_empr_fits <- lapply(algs, function(alg) sag_fit(empr_data$X, empr_data$y,
                                                     lambda=lambda,

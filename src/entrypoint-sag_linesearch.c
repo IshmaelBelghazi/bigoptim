@@ -18,12 +18,18 @@ const static double precision = 1.490116119384765625e-8;
  *     use 2/(L + n*myu)
  *     @return optimal weights (p, 1)
  */
-SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                      SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType, SEXP family, SEXP tol,
+SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
+                      SEXP stepSizeInit, SEXP iVals, SEXP dInit, SEXP gInit,
+                      SEXP coveredInit, SEXP stepSizeType, SEXP family, SEXP tol,
                       SEXP sparse) {
-  // Initializing protection counter
+  /* Initializing protection counter */
   int nprot = 0;
+  /* Duplicating objects to be modified */
+  SEXP w = PROTECT(duplicate(wInit)); nprot++;
+  SEXP d = PROTECT(duplicate(dInit)); nprot++;
+  SEXP g = PROTECT(duplicate(gInit)); nprot++;
+  SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
+  SEXP stepSize = PROTECT(duplicate(stepSizeInit)); nprot++;
 
   /*======\
   | Input |
@@ -60,7 +66,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .iter = 0,
+                        .iter_count = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
                         .stepSizeType = *INTEGER(stepSizeType),
@@ -123,7 +129,7 @@ SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   /* Counting*/
   count_covered_samples(&train_set);
   /* Training */
-  _sag_linesearch(&trainer, &model, &train_set);
+  sag_linesearch(&trainer, &model, &train_set);
   /*=======\
   | Return |
   \=======*/

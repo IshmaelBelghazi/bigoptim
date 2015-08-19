@@ -2,7 +2,7 @@
 
 const static int one = 1;
 
-void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
+void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   /* Unpacking Structs */
 
@@ -20,8 +20,8 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   /* Sampling */
   double *randVals = dataset->randVals;
   int *covered = dataset->covered;
-  double * unCoveredMatrix = dataset->unCoveredMatrix;
-  double * LiMatrix = dataset->LiMatrix;
+  double *unCoveredMatrix = dataset->unCoveredMatrix;
+  double *LiMatrix = dataset->LiMatrix;
   double *nDescendants = dataset->nDescendants;
   double *nCovered = &dataset->nCovered;
   double *Lmean = &dataset->Lmean;
@@ -33,6 +33,7 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double lambda = trainer->lambda;
   double alpha = trainer->alpha;
   double precision = trainer->precision;
+  double tol = trainer->tol;
 
   /* Model */
   double *w = model->w;
@@ -48,12 +49,36 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
-    lastVisited = Calloc(nVars, int);
-    cumSum = Calloc(maxIter, double);
+    lastVisited = dataset->lastVisited;
+    cumSum = dataset->cumSum;
   }
   /* Approximate gradients*/
   double *g = trainer->g;
   double *d = trainer->d;
+
+  /* Training */
+  _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples, randVals,
+                covered, unCoveredMatrix, LiMatrix, nDescendants, nCovered,
+                Lmean, nLevels, nextpow2, maxIter, lambda, alpha, precision,
+                tol, loss_function, grad_fun, sparse, jc, ir, lastVisited,
+                cumSum, d, g);
+
+  Free(lastVisited);
+  Free(cumSum);
+  Free(nDescendants);
+  Free(unCoveredMatrix);
+  Free(LiMatrix);
+}
+
+void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
+                   int increasing, int nVars, int nSamples, double *randVals,
+                   int *covered, double *unCoveredMatrix, double *LiMatrix,
+                   double *nDescendants, double *nCovered, double *Lmean,
+                   int nLevels, int nextpow2, int maxIter, double lambda,
+                   double alpha, double precision, double tol,
+                   loss_fun loss_function, loss_grad_fun grad_fun, int sparse,
+                   int *jc, int *ir, int *lastVisited, double *cumSum,
+                   double *d, double *g) {
 
   /* Training variables*/
   int i = 0, ind = 0;
@@ -65,7 +90,12 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double gg = 0, wtx = 0, xtx = 0;
   double u = 0, z = 0, Z = 0;
 
-  for (int k = 0; k < maxIter; k++) {
+  double cost_agrad_norm =
+      get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+  int stop_condition = 0;
+  /* Training Loop */
+  int k = 0; // TODO(Ishmael): Consider using the register keyword
+  while (!stop_condition) {
     /* Select next training example */
     offset = 0;
     i = 0;
@@ -86,11 +116,11 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
       /* Sample from covered guys according to estimate of Lipschitz constant */
       Z = LiMatrix[nextpow2 * (nLevels - 1)] +
           (*Lmean + 2 * lambda) * (nDescendants[nextpow2 * (nLevels - 1)] -
-                                  unCoveredMatrix[nextpow2 * (nLevels - 1)]);
+                                   unCoveredMatrix[nextpow2 * (nLevels - 1)]);
       for (int level = nLevels - 1; level >= 0; level--) {
         z = offset + LiMatrix[2 * i + nextpow2 * level] +
             (*Lmean + 2 * lambda) * (nDescendants[2 * i + nextpow2 * level] -
-                                    unCoveredMatrix[2 * i + nextpow2 * level]);
+                                     unCoveredMatrix[2 * i + nextpow2 * level]);
         if (u < z / Z) {
           i = 2 * i;
         } else {
@@ -147,10 +177,9 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     wtx = innerProd;
     xtx = 0;
     if (sparse) {
-      for(int j=jc[i];j<jc[i+1];j++)
-        xtx += Xt[j]*Xt[j];
-    }
-    else {
+      for (int j = jc[i]; j < jc[i + 1]; j++)
+        xtx += Xt[j] * Xt[j];
+    } else {
       xtx = F77_CALL(ddot)(&nVars, &Xt[nVars * i], &one, &Xt[nVars * i], &one);
     }
     gg = grad * grad * xtx;
@@ -172,8 +201,8 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     if (covered[i] == 0) {
       covered[i] = 1;
       (*nCovered)++;
-      *Lmean = *Lmean * ((double)(*nCovered - 1) / (double)*nCovered) +
-              Li[i] / (double)*nCovered;
+      *Lmean = *Lmean *((double)(*nCovered - 1) / (double)*nCovered) +
+               Li[i] / (double)*nCovered;
 
       /* Update unCoveredMatrix so we don't sample this guy when looking for a
        * new guy */
@@ -222,15 +251,21 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
         cumSum[k] = cumSum[k - 1] + alpha / (c * *nCovered);
       }
     } else {
-      scaling = 1 - alpha * trainer->lambda;
-      F77_CALL(dscal)(&dataset->nVars, &scaling, w, &one);
-      scaling = -alpha/dataset->nCovered;
-      F77_CALL(daxpy)(&dataset->nVars, &scaling, d, &one, w, &one);
+      scaling = 1 - alpha * lambda;
+      F77_CALL(dscal)(&nVars, &scaling, w, &one);
+      scaling = -alpha / *nCovered;
+      F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
 
     /* Decrease value of max Lipschitz constant */
     if (increasing)
       *Lmax *= pow(2.0, -1.0 / nSamples);
+    /* Incrementing iteration count */
+    k++;
+    /* Checking Stopping criterions */
+    cost_agrad_norm =
+        get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+    stop_condition = (k >= maxIter) || (cost_agrad_norm <= tol);
   }
 
   if (sparse) {
@@ -243,11 +278,5 @@ void _sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     }
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    Free(lastVisited);
-    Free(cumSum);
   }
-  Free(nDescendants);
-  Free(unCoveredMatrix);
-  Free(LiMatrix);
 }
-

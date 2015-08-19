@@ -22,11 +22,17 @@ const static int DEBUG = 0;
  * @return optimal weights (p, 1)
  *
  */
-SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered, SEXP family, SEXP tol, SEXP sparse) {
-  // Initializing garbage collection protection counter
+SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
+                    SEXP stepSize, SEXP iVals, SEXP dInit, SEXP gInit,
+                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse) {
+  /* Initializing garbage collection protection counter */
   int nprot = 0;
+  /* Duplicating objects to be modified */
+  SEXP w = PROTECT(duplicate(wInit)); nprot++;
+  SEXP d = PROTECT(duplicate(dInit)); nprot++;
+  SEXP g = PROTECT(duplicate(gInit)); nprot++;
+  SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
+
   /*======\
   | Input |
   \======*/
@@ -59,7 +65,7 @@ SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
                         .alpha = *REAL(stepSize),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .iter = 0,
+                        .iter_count = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol)};
 
@@ -96,29 +102,21 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
   if (train_set.nVars != INTEGER(GET_DIM(w))[0]) {
     error("w and Xt must have the same number of rows");
   }
-  if (DEBUG) Rprintf(" w and Xt check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(y))[0]) {
     error("number of columns of Xt must be the same as the number of rows in y");
   }
-  if (DEBUG) Rprintf(" nSamples and Xt dim check passed.\n");
   if (train_set.nVars != INTEGER(GET_DIM(d))[0]) {
     error("w and d must have the same number of rows");
   }
-  if (DEBUG) Rprintf(" w and d dim check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(g))[0]) {
     error("w and g must have the same number of rows");
   }
-  if (DEBUG) Rprintf(" w and g dim check passed.\n");
   if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must have the same number of rows");
   }
-  if (DEBUG) Rprintf(" covered and y dim check passed.\n");
-  // TODO(Ishmael): SAG_logistic_BLAS line 62
   if (train_set.sparse && trainer.alpha * trainer.lambda == 1) {
     error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
   }
-  if (DEBUG) Rprintf(" sparse and alpha * lambda check passd. \n");
-  if (DEBUG) Rprintf("Initial error Checks all passed\n");
   /*==============================\
   | Stochastic Average Gradient   |
   \==============================*/
@@ -126,7 +124,7 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
   /* Counting covered examples*/
   count_covered_samples(&train_set);
   /* Training */
-  _sag_constant(&trainer, &model, &train_set);
+  sag_constant(&trainer, &model, &train_set);
 
   /*=======\
   | Return |
@@ -142,15 +140,15 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
   Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
   SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
   *INTEGER(convergence_code_return) = -1;//convergence_code;
-  SEXP iter_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(iter_return) = trainer.iter;
+  SEXP iter_count_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(iter_count_return) = trainer.iter_count;
 
   /* Assigning variables to SEXP list */
   SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return, iter_return); // in utils.h
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return, iter_count_return); // in utils.h
   /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter");
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter_count");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);

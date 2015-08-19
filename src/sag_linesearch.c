@@ -2,7 +2,7 @@
 
 const static int one = 1;
 
-void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
+void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   /* Unpacking Structs */
 
@@ -19,13 +19,14 @@ void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   int *iVals = dataset->iVals;
   int *covered = dataset->covered;
   double *nCovered = &dataset->nCovered;
+
   /* Training parameters */
   int maxIter = trainer->maxIter;
   double lambda = trainer->lambda;
   double alpha = trainer->alpha;
   double precision = trainer->precision;
   int stepSizeType = trainer->stepSizeType;
-
+  double tol = trainer->tol;
   /* Model */
   double *w = model->w;
   loss_fun loss_function = model->loss;
@@ -40,13 +41,34 @@ void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     /* Sparse indices*/
     jc = dataset->jc;
     ir = dataset->ir;
-    lastVisited = Calloc(nVars, int);
-    cumSum = Calloc(maxIter, double);
+    lastVisited = dataset->lastVisited;
+    cumSum = dataset->cumSum;
   }
 
   /* Approximate gradients*/
   double *g = trainer->g;
   double *d = trainer->d;
+
+  /* Training */
+  _sag_linesearch(w, Xt, y, lambda,
+                  alpha, stepSizeType, precision, Li,
+                  d, g, loss_function, grad_function,
+                  iVals, covered, nCovered, nVars, nSamples,
+                  sparse, ir, jc, lastVisited,
+                  cumSum, maxIter, tol);
+
+
+  /* Deallocating */
+  Free(lastVisited);
+  Free(cumSum);
+}
+
+  void _sag_linesearch(double * w, double * Xt, double * y, double lambda,
+    double alpha, int stepSizeType, double precision, double * Li,
+    double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
+    int * iVals, int * covered, double * nCovered, int nVars, int nSamples,
+    int sparse, int * ir, int * jc, int * lastVisited,
+    double * cumSum, int maxIter, double tol) {
 
   /* Training variables*/
   int i = 0;
@@ -55,7 +77,12 @@ void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double fi = 0, fi_new = 0;
   double gg = 0, wtx = 0, xtx = 0;
 
-  for (int k = 0; k < maxIter; k++) {
+  double cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
+                                               nSamples, nVars);
+  int stop_condition = 0;
+  /* Training Loop */
+  int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  while (!stop_condition){
     /* Select next training example */
     i = iVals[k] - 1;
 
@@ -152,6 +179,12 @@ void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
     /* Decrease value of Lipschitz constant */
     *Li *= pow(2.0, -1.0 / nSamples);
+    /* Incrementing iteration count */
+    k++;
+    /* Checking Stopping criterions */
+    cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
+                                          nSamples, nVars);
+    stop_condition = (k >= maxIter) || (cost_agrad_norm <= tol);
   }
 
   if (sparse) {
@@ -164,7 +197,5 @@ void _sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     }
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    Free(lastVisited);
-    Free(cumSum);
   }
 }

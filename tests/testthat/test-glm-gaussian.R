@@ -24,19 +24,18 @@ algs <- list(constant="constant",
              adaptive="adaptive")
 ## Data
 sample_size <- 3000  ## For sampled and empirical data
-## Empirical data
-data(covtype.libsvm)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 0.00001 ## Stop training when norm of approximate gradient is smaller than tol
+tol <- 1e-4 ## Stop training when norm of approximate gradient is smaller than tol
 maxiter <- sample_size * 1000
 lambda <- 1/sample_size
 ## B. Simulated Data tests
 ## Generating simulated data
 sample_size <- 3000
 true_params <- c(1:3)
-sim_data <- .simulate_gaussian(true_params, sample_size=sample_size, intercept=FALSE)
+sim_data <- .simulate_gaussian(true_params, sample_size=sample_size,
+                               intercept=FALSE)
 sim_data$X <- scale(sim_data$X)
 ## Fitting simulated data with SAG
 sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
@@ -48,7 +47,8 @@ sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
                                                    fit_alg=alg))
 
 ## B.1: Approximate gradient is small on simulated data
-approx_grad_norm <- lapply(sag_sim_fits, function(fit) norm(fit$approx_grad, 'F'))
+approx_grad_norm <- lapply(sag_sim_fits, function(fit)
+                                           norm(fit$approx_grad, 'F'))
 
 test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm$constant, eps)

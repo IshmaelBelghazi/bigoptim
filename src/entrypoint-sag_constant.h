@@ -12,9 +12,9 @@
 #include "Matrix.h"
 #include "cholmod.h"
 
-SEXP C_sag_constant(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                    SEXP covered, SEXP family, SEXP tol, SEXP sparse);
+SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
+                    SEXP stepSize, SEXP iVals, SEXP dInit, SEXP gInit,
+                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse);
 
 
 #endif /* ENTRYPOINT_SAG_CONSTANT_H_ */

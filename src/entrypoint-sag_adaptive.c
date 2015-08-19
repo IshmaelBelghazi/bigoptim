@@ -23,12 +23,20 @@ const static double precision = 1.490116119384765625e-8;
  *
  *   @return optimal weights (p, 1)
  */
-SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP Lmax, SEXP Li, SEXP randVals, SEXP d,
-                    SEXP g, SEXP covered, SEXP increasing, SEXP family,
+SEXP C_sag_adaptive(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
+                    SEXP LmaxInit, SEXP LiInit, SEXP randVals, SEXP dInit,
+                    SEXP gInit, SEXP coveredInit, SEXP increasing, SEXP family,
                     SEXP tol, SEXP sparse) {
   /* initializing protection counter */
   int nprot = 0;
+
+  /* Duplicating objects to be modified */
+  SEXP w = PROTECT(duplicate(wInit)); nprot++;
+  SEXP d = PROTECT(duplicate(dInit)); nprot++;
+  SEXP g = PROTECT(duplicate(gInit)); nprot++;
+  SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
+  SEXP Lmax = PROTECT(duplicate(LmaxInit)); nprot++;
+  SEXP Li = PROTECT(duplicate(LiInit)); nprot++;
 
   /*======\
   | Input |
@@ -66,7 +74,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   GlmTrainer trainer = {.lambda = *REAL(lambda),
                         .d = REAL(d),
                         .g = REAL(g),
-                        .iter = 0,
+                        .iter_count = 0,
                         .maxIter = INTEGER(GET_DIM(randVals))[0],
                         .tol = *REAL(tol),
                         .precision = precision};
@@ -176,7 +184,7 @@ SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
   train_set.unCoveredMatrix = unCoveredMatrix;
   train_set.LiMatrix = LiMatrix;
   /* Training */
-  _sag_adaptive(&trainer, &model, &train_set);
+  sag_adaptive(&trainer, &model, &train_set);
 
   /*=======\
   | Return |

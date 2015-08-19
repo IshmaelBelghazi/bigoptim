@@ -12,9 +12,9 @@
 #include "Matrix.h"
 #include "cholmod.h"
 
-SEXP C_sag_linesearch(SEXP w, SEXP Xt, SEXP y, SEXP lambda,
-                      SEXP stepSize, SEXP iVals, SEXP d, SEXP g,
-                      SEXP covered, SEXP stepSizeType, SEXP family, SEXP tol,
+SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
+                      SEXP stepSizeInit, SEXP iVals, SEXP dInit, SEXP gInit,
+                      SEXP coveredInit, SEXP stepSizeType, SEXP family, SEXP tol,
                       SEXP sparse);
 
 

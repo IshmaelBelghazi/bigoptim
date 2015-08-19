@@ -2,7 +2,7 @@
 
 const static int one = 1;
 
-void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
+void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
 
   /* Unpacking Structs */
 
@@ -12,6 +12,7 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
 
   /* Dimensions */
   int nVars = dataset->nVars;
+  int nSamples = dataset->nSamples;
 
   /* Sampling */
   int * iVals = dataset->iVals;
@@ -21,6 +22,7 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
   int maxIter = trainer->maxIter;
   double lambda = trainer->lambda;
   double alpha = trainer->alpha;
+  double tol = trainer->tol;
   /* Model */
   double * w = model->w;
   loss_grad_fun grad_fun = model->grad;
@@ -34,21 +36,43 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
-    lastVisited = Calloc(nVars, int);
-    cumSum = Calloc(maxIter, double);
+    lastVisited = dataset->lastVisited;
+    cumSum = dataset->cumSum;
   }
 
   /* Approximate gradients*/
   double * g = trainer->g;
   double * d = trainer->d;
 
+  /* Training */
+  _sag_constant(w, Xt, y, lambda, alpha,
+                d, g, grad_fun,
+                iVals, covered, nCovered,
+                nSamples, nVars, sparse, jc, ir,
+                lastVisited, cumSum, tol, maxIter);
 
+  /* Deallocating */
+  if (sparse) {
+    Free(lastVisited);
+    Free(cumSum);
+  }
+}
+
+void _sag_constant(double * w, double * Xt, double * y, double lambda, double alpha,
+                   double * d, double * g, loss_grad_fun grad_fun,
+                   int * iVals, int * covered, double * nCovered,
+                   int nSamples, int nVars, int sparse, int * jc, int * ir,
+                   int * lastVisited, double * cumSum, double tol, int maxIter) {
   /* Training variables*/
   int i = 0;
   double c = 1.0;
   double scaling = 0, innerProd = 0, grad = 0;
-
-  for (int k = 0; k < maxIter; k++) {
+  double cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
+                                               nSamples, nVars);
+  int stop_condition = 0;
+  /* Training Loop */
+  int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  while (!stop_condition) {
     /* Select next training example */
     i = iVals[k] - 1;
     /* Compute current values of needed parameters */
@@ -80,8 +104,9 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
 
     /* Update direction */
     if (sparse) {
-      for (int j = jc[i]; j < jc[i + 1]; j++)
+      for (int j = jc[i]; j < jc[i + 1]; j++) {
         d[ir[j]] += Xt[j] * (grad - g[i]);
+      }
     } else {
       scaling = grad - g[i];
       F77_CALL(daxpy)(&nVars, &scaling, &Xt[i * nVars], &one, d, &one);
@@ -109,8 +134,13 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
       scaling = -alpha / *nCovered;
       F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
+    /* Incrementing iteration count */
+    k++;
+    /* Checking Stopping criterions */
+    cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
+                                          nSamples, nVars);
+    stop_condition = (k >= maxIter) || (cost_agrad_norm <= tol);
   }
-
 
   if (sparse) {
     for (int j = 0; j < nVars; j++) {
@@ -122,7 +152,5 @@ void _sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
     }
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
-    Free(lastVisited);
-    Free(cumSum);
   }
 }

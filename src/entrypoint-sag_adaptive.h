@@ -13,8 +13,8 @@
 #include "cholmod.h"
 
 
-SEXP C_sag_adaptive(SEXP w, SEXP Xt, SEXP y, SEXP lambda, SEXP Lmax,
-                    SEXP Li, SEXP randVals, SEXP d, SEXP g, SEXP covered,
+SEXP C_sag_adaptive(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda, SEXP LmaxInit,
+                    SEXP LiInit, SEXP randVals, SEXP dInit, SEXP gInit, SEXP coveredInit,
                     SEXP increasing, SEXP family, SEXP tol, SEXP sparse);
 
 #endif /* ENTRYPOINT_SAG_ADAPTIVE_H_ */

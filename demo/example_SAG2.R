@@ -19,13 +19,15 @@ print("Running Stochastic Average Gradient with constant step size")
 sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
                             family=family, tol=tol, model="binomial",
                             fit_alg="constant", standardize=FALSE)
-cost_constant <- .binomial_cost(X, y, coef(sag_constant_fit), lambda=lambda, backend="C")
+cost_constant <- .binomial_cost(X, y, coef(sag_constant_fit),
+                                lambda=lambda, backend="C")
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513607",
               cost_constant))
-cost_grad_const <- .binomial_cost_grad(X, y, coef(sag_constant_fit), lambda=lambda, backend="C")
+cost_grad_const <- .binomial_cost_grad(X, y, coef(sag_constant_fit),
+                                       lambda=lambda, backend="C")
 cost_grad_const_norm <- norm(cost_grad_const, 'F')
-print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394", cost_grad_const_norm))
-
+print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
+              cost_grad_const_norm))
 
 ## -----------------------------------------------------------------------------
 ## SAG with linesearch
@@ -36,28 +38,35 @@ sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
                       maxiter=maxiter, family=family,
                       tol=tol, model="binomial", fit_alg="linesearch",
                       standardize=FALSE)
-cost_ls <- .binomial_cost(X, y, coef(sag_ls_fit), lambda=lambda, backend="C")
+cost_ls <- .binomial_cost(X, y, coef(sag_ls_fit),
+                          lambda=lambda, backend="C")
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513497",
               cost_ls))
-cost_grad_ls <- .binomial_cost_grad(X, y, coef(sag_ls_fit), lambda=lambda, backend="C")
+cost_grad_ls <- .binomial_cost_grad(X, y, coef(sag_ls_fit),
+                                    lambda=lambda, backend="C")
 cost_grad_ls_norm <- norm(cost_grad_ls, 'F')
-print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394", cost_grad_ls_norm))
+print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
+              cost_grad_ls_norm))
 
 ## -----------------------------------------------------------------------------
 ## SAG with linesearch and adaptive sampling
-print(paste0("Running Stoachastic Average Gradient with ",
+print(paste0("Running Stochastic Average Gradient with ",
              "linesearch and adaptive sampling"))
 randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
-sag_adaptive_fit <- sag_fit(X, y, lambda=lambda, maxiter=maxiter, randVals=randVals,
-                           tol=tol, model="binomial", fit_alg="adaptive", standardize=FALSE)
+sag_adaptive_fit <- sag_fit(X, y, lambda=lambda,
+                            maxiter=maxiter, randVals=randVals,
+                            tol=tol, model="binomial", fit_alg="adaptive",
+                            standardize=FALSE)
 
+cost_adaptive <- .binomial_cost(X, y, sag_adaptive_fit$w,
+                                lambda=lambda, backend="C")
 
-cost_adaptive <- .binomial_cost(X, y, sag_adaptive_fit$w, lambda=lambda, backend="C")
-
-print(sprintf("Cost is: %f. Value in Mark's matlab code: TBD",
+print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513625",
               cost_adaptive))
 
-cost_grad_adaptive <- .binomial_cost_grad(X, y, sag_adaptive_fit$w, lambda=lambda, backend="C")
+cost_grad_adaptive <- .binomial_cost_grad(X, y, sag_adaptive_fit$w,
+                                          lambda=lambda, backend="C")
 cost_grad_adaptive_norm <- norm(cost_grad_adaptive, 'F')
-print(sprintf("Gradient norm: %f. Value in Mark's matlab code: TBD", cost_grad_adaptive_norm))
+print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.006863",
+              cost_grad_adaptive_norm))
  
