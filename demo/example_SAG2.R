@@ -7,7 +7,7 @@ y[y == 2] <- -1
 n <- NROW(X)
 p <- NCOL(X)
 ## Setting seed
-set.seed(0)
+#set.seed(0)
 ## Setting up problem
 maxiter <- n * 10  ## 10 passes throught the dataset
 lambda <- 1/n 
@@ -19,12 +19,10 @@ print("Running Stochastic Average Gradient with constant step size")
 sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
                             family=family, tol=tol, model="binomial",
                             fit_alg="constant", standardize=FALSE)
-cost_constant <- .binomial_cost(X, y, coef(sag_constant_fit),
-                                lambda=lambda, backend="C")
+cost_constant <- get_cost(sag_constant_fit, X, y)
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513607",
               cost_constant))
-cost_grad_const <- .binomial_cost_grad(X, y, coef(sag_constant_fit),
-                                       lambda=lambda, backend="C")
+cost_grad_const <- get_grad(sag_constant_fit, X, y) 
 cost_grad_const_norm <- norm(cost_grad_const, 'F')
 print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
               cost_grad_const_norm))
@@ -38,12 +36,10 @@ sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
                       maxiter=maxiter, family=family,
                       tol=tol, model="binomial", fit_alg="linesearch",
                       standardize=FALSE)
-cost_ls <- .binomial_cost(X, y, coef(sag_ls_fit),
-                          lambda=lambda, backend="C")
+cost_ls <- get_cost(sag_ls_fit, X=X, y=y) 
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513497",
               cost_ls))
-cost_grad_ls <- .binomial_cost_grad(X, y, coef(sag_ls_fit),
-                                    lambda=lambda, backend="C")
+cost_grad_ls <- get_grad(sag_ls_fit, X=X, y=y) 
 cost_grad_ls_norm <- norm(cost_grad_ls, 'F')
 print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
               cost_grad_ls_norm))
@@ -58,14 +54,11 @@ sag_adaptive_fit <- sag_fit(X, y, lambda=lambda,
                             tol=tol, model="binomial", fit_alg="adaptive",
                             standardize=FALSE)
 
-cost_adaptive <- .binomial_cost(X, y, sag_adaptive_fit$w,
-                                lambda=lambda, backend="C")
-
+cost_adaptive <- get_cost(sag_adaptive_fit, X=X, y=y) 
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513625",
               cost_adaptive))
 
-cost_grad_adaptive <- .binomial_cost_grad(X, y, sag_adaptive_fit$w,
-                                          lambda=lambda, backend="C")
+cost_grad_adaptive <- get_grad(sag_adaptive_fit, X=X, y=y) 
 cost_grad_adaptive_norm <- norm(cost_grad_adaptive, 'F')
 print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.006863",
               cost_grad_adaptive_norm))

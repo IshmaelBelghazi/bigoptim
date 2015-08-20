@@ -63,7 +63,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
          constant={
            if (is.null(stepSize)) {
              Lmax <- 0.25 * max(Matrix::rowSums(X^2)) + lambda
-             stepSize <- 1/Lmax
+             stepSize <- 1/(16 * Lmax)  ## 1/L
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_constant", w, Matrix::t(X), y, lambda, stepSize,
@@ -103,9 +103,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
   ##,---------------------------
   ##| Structuring SAG_fit object
   ##`---------------------------
-  sag_fit$params <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize)
-  ## Adding approximate  cost gradient
-  sag_fit$approx_grad <- sag_fit$d/NROW(X) + lambda * sag_fit$w
+  sag_fit$input <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize)
   class(sag_fit) <- "SAG_fit"
   sag_fit
 }

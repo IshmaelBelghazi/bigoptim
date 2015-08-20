@@ -27,12 +27,11 @@ sample_size <- 3000  ## For sampled and empirical data
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 1e-4 ## Stop training when norm of approximate gradient is smaller than tol
-maxiter <- sample_size * 1000
+tol <- 0 ## Stop training when norm of approximate gradient is smaller than tol
+maxiter <- sample_size * 50 
 lambda <- 1/sample_size
 ## B. Simulated Data tests
 ## Generating simulated data
-sample_size <- 3000
 true_params <- c(1:3)
 sim_data <- .simulate_gaussian(true_params, sample_size=sample_size,
                                intercept=FALSE)
@@ -48,7 +47,7 @@ sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
 
 ## B.1: Approximate gradient is small on simulated data
 approx_grad_norm <- lapply(sag_sim_fits, function(fit)
-                                           norm(fit$approx_grad, 'F'))
+                                           norm(get_approx_grad(fit), 'F'))
 
 test_that("Approximate gradient is small on simulated data", {
   expect_less_than(approx_grad_norm$constant, eps)
@@ -58,12 +57,8 @@ test_that("Approximate gradient is small on simulated data", {
 
 ## B.2: True gradient is small on simulated data
 sim_grad <- lapply(sag_sim_fits, function(fit) {
-  .gaussian_cost_grad(sim_data$X,
-                      sim_data$y,
-                      coef(fit),
-                      lambda=lambda,
-                      backend="R")})
-
+  get_grad(fit, sim_data$X, sim_data$y)
+})
 sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
 
 test_that("True Gradient is small on simulated data", {

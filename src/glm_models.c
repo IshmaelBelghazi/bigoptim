@@ -22,13 +22,12 @@ double glm_cost(double * Xt, double * y, double * w,
   return cost;
 }
 /* Generic glm grad function */
-
 void glm_cost_grad(double * Xt, double * y, double * w, double lambda,
                    const int nSamples, const int nVars,
                    loss_grad_fun glm_grad, double * grad) {
   for (int i = 0; i < nSamples; i++) {
     double innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
-    double innerProd_grad = (* glm_grad)(y[i], innerProd);
+    double innerProd_grad = (*glm_grad)(y[i], innerProd);
     F77_CALL(daxpy)(&nVars, &innerProd_grad, &Xt[nVars * i], &one, grad, &one);
   }
   // Dividing each entry by nSamples
@@ -44,7 +43,7 @@ void glm_cost_grad(double * Xt, double * y, double * w, double lambda,
 
 /* loss function */
 double binomial_loss(double y, double innerProd) {
-  return log(1 + exp(-y * innerProd));
+  return log1p(exp(-y * innerProd));
 }
 
 /* Gradient of loss function */
@@ -55,6 +54,7 @@ double binomial_loss_grad(double y, double innerProd) {
 /* Cost function*/
 double binomial_cost(double * Xt, double * y, double * w, double lambda,
                        const int nSamples, const int nVars) {
+
   return glm_cost(Xt, y, w, lambda, nSamples, nVars, &binomial_loss);
 }
 
@@ -87,7 +87,7 @@ double gaussian_cost(double * Xt, double * y, double * w, double lambda,
 /* Gradient of cost function*/
 void gaussian_cost_grad(double * Xt, double * y, double * w, double lambda,
                         const int nSamples, const int nVars, double * grad) {
-  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &gaussian_loss, grad);
+  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &gaussian_loss_grad, grad);
 }
 
 /*============\
@@ -99,7 +99,7 @@ double exponential_loss(double y, double innerProd) {
   return exp(-y * innerProd);
 }
 /* Exponential gradient function */
-double exponential_grad(double y, double innerProd) {
+double exponential_loss_grad(double y, double innerProd) {
   return -y * exp(-y * innerProd);
 }
 
@@ -112,7 +112,7 @@ double exponential_cost(double * Xt, double * y, double * w, double lambda,
 /* Gradient of cost function*/
 void exponential_cost_grad(double * Xt, double * y, double * w, double lambda,
                         const int nSamples, const int nVars, double * grad) {
-  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &exponential_loss, grad);
+  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &exponential_loss_grad, grad);
 }
 
 /*========\
@@ -137,5 +137,5 @@ double poisson_cost(double * Xt, double * y, double * w, double lambda,
 /* Gradient of cost function*/
 void poisson_cost_grad(double * Xt, double * y, double * w, double lambda,
                            const int nSamples, const int nVars, double * grad) {
-  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &poisson_loss, grad);
+  glm_cost_grad(Xt, y, w, lambda, nSamples, nVars, &poisson_loss_grad, grad);
 }

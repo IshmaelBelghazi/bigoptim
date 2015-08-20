@@ -1,6 +1,7 @@
 #include "sag_linesearch.h"
 
 const static int one = 1;
+const static int DEBUG = 0;
 
 void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
@@ -77,8 +78,8 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double fi = 0, fi_new = 0;
   double gg = 0, wtx = 0, xtx = 0;
 
-  double cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
-                                               nSamples, nVars);
+  double agrad_norm = 0;
+
   int stop_condition = 0;
   /* Training Loop */
   int k = 0;  // TODO(Ishmael): Consider using the register keyword
@@ -179,12 +180,15 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
     /* Decrease value of Lipschitz constant */
     *Li *= pow(2.0, -1.0 / nSamples);
+
+    /* if (k % nSamples == 0 && DEBUG) { */
+    /*   R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
+    /* } */
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
-    cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
-                                          nSamples, nVars);
-    stop_condition = (k >= maxIter) || (cost_agrad_norm <= tol);
+    agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
+    stop_condition = (k >= maxIter) || (agrad_norm <= tol);
   }
 
   if (sparse) {

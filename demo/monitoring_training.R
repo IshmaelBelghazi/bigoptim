@@ -17,32 +17,33 @@ set.seed(0)
 ## Number of lambdas to compute
 nlambda <- 5
 ## Getting lambdas grid
+
 glmnet_fit <- glmnet(X, as.factor(y), alpha=0, family="binomial",
                      nlambda=nlambda, standardize=FALSE, intercept=FALSE)
 lambdas <- rev(glmnet_fit$lambda)
 
 
-trainers <- list(constant=list(fun=sag_constant,
-                               params=list(covered=NULL,
-                                           w=NULL,
-                                           d=NULL,
-                                           g=NULL,
-                                           stepSize=NULL
-                                           )),
-                  ls=list(fun=sag_ls,
-                          params=list(covered=NULL,
-                                      w=NULL,
-                                      d=NULL,
-                                      g=NULL,
-                                      stepSize=NULL)))
+algs <- list(constant=list(fit_alg="constant",
+                           params=list(covered=NULL,
+                                       w=NULL,
+                                       d=NULL,
+                                       g=NULL,
+                                       stepSize=NULL
+                                       )),
+             ls=list(fit_alg="linesearch",
+                     params=list(covered=NULL,
+                                 w=NULL,
+                                 d=NULL,
+                                 g=NULL,
+                                 stepSize=NULL
+                                 )))
 ## Training monitoring functions
 monitor_training_by_iter <- function(X, y, lambda, iVals,
                                      trainers_list=trainers,
-                                     maxiter=NROW(X) * 10,
+                                     maxiter=NROW(X) * 50,
                                      tol=0,
-                                     training_periods=100,
-                                     grad_fun=.bernoulli_cost_grad,
-                                     cost_fun=.bernoulli_cost_C,
+                                     training_periods=50,
+                                     model="binomial",
                                      verbose=TRUE, ...) {
 
   iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE),
@@ -51,9 +52,9 @@ monitor_training_by_iter <- function(X, y, lambda, iVals,
   training_breaks <- c(seq(1, NROW(iVals) - NROW(iVals) %% training_periods,
                            by=NROW(iVals) %/% training_periods), NROW(iVals))
   training_table <- data.frame(iteration=numeric(),
-                              grad_norm=numeric(),
-                              cost=numeric(),
-                              fit_alg=character())
+                               grad_norm=numeric(),
+                               cost=numeric(),
+                               fit_alg=character())
   ## Training with warm starting.
   for (i in 1:training_periods) {
   if(verbose) {
@@ -61,29 +62,37 @@ monitor_training_by_iter <- function(X, y, lambda, iVals,
   }
     iVals_i <- iVals[training_breaks[i]:training_breaks[i + 1],, drop=FALSE]
     ## Fitting model
-    fits_i <- lapply(trainers, function(model) {
-      fit <- model$fun(X, y, wInit=model$params$w, lambda=lambda,
-                       iVals=iVals_i,
-                       d=model$params$d,
-                       g=model$params$g,
-                       covered=model$params$covered,
-                       stepSize=model$params$stepSize,
-                       tol=tol,
-                       family=family)
-      fit <- list(params=fit[names(model$params)])
+    fits_i <- lapply(algs, function(alg) {
+      if (verbose) {
+        print(sprintf("Processing alg: %s", alg$fit_alg))
+      }
+      fit <- sag_fit(X, y, lambda, maxiter=NROW(iVals_i),
+                     iVals=iVals_i, d=alg$params$d, g=alg$params$g,
+                     covered=alg$params$covered,
+                     stepSize=alg$params$stepSize,
+                     tol=tol,
+                     model=model,
+                     fit_alg=alg$fit_alg)
+      fit <- list(params=fit[names(alg$params)])
       fit
     })
-    trainers <- modifyList(trainers, fits_i, keep.null=TRUE)
+    for (alg_name in names(algs)) {
+      algs[[alg_name]]$params$w <- fits_i[[alg_name]]$w
+      algs[[alg_name]]$params$d <- fits_i[[alg_name]]$d
+      algs[[alg_name]]$params$g <- fits_i[[alg_name]]$g
+      algs[[alg_name]]$params$stepSize <- fits_i[[alg_name]]$stepSize
+    }
+    algs <- modifyList(algs, fits_i, keep.null=TRUE)
     ## Computing gradient norm and loss
-    results_i <- mapply(function(trainer, trainer_name) {
+    results_i <- mapply(function(algs, algs_name) {
       data.frame(iteration=training_breaks[i + 1],
                  grad_norm=norm(grad_fun(X, y,
                                          trainer$params$w,
                                          lambda=lambda), 'F'),
                  cost=cost_fun(X, y,
-                               trainer$params$w, lambda=lambda),
-                 fit_alg=trainer_name)},
-                 trainers, names(trainers),
+                               alg$params$w, lambda=lambda),
+                 fit_alg=algs_name)},
+                 algs, names(algs),
                  USE.NAMES=FALSE,
                  SIMPLIFY=FALSE)
     training_table <- rbind(training_table, do.call(rbind, results_i))

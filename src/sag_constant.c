@@ -1,7 +1,7 @@
 #include "sag_constant.h"
 
 const static int one = 1;
-
+const static int DEBUG = 0;
 void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
 
   /* Unpacking Structs */
@@ -67,8 +67,9 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
   int i = 0;
   double c = 1.0;
   double scaling = 0, innerProd = 0, grad = 0;
-  double cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
-                                               nSamples, nVars);
+
+  double agrad_norm = 0;
+
   int stop_condition = 0;
   /* Training Loop */
   int k = 0;  // TODO(Ishmael): Consider using the register keyword
@@ -134,12 +135,15 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
       scaling = -alpha / *nCovered;
       F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
-    /* Incrementing iteration count */
-    k++;
-    /* Checking Stopping criterions */
-    cost_agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered,
-                                          nSamples, nVars);
-    stop_condition = (k >= maxIter) || (cost_agrad_norm <= tol);
+
+/* if (k % nSamples == 0 && DEBUG) { */
+/*     R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
+/*       } */
+  /* Incrementing iteration count */
+  k++;
+  /* Checking Stopping criterions */
+  agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
+  stop_condition = (k >= maxIter) || (agrad_norm <= tol);
   }
 
   if (sparse) {

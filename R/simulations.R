@@ -1,5 +1,5 @@
 ##' @export
-.simulate_bernoulli <- function(true_params, sample_size, intercept=FALSE) {
+.simulate_binomial <- function(true_params, sample_size, intercept=FALSE) {
 
     n_params <- length(true_params)
     X <- matrix(rnorm(n_params * sample_size), ncol=n_params)

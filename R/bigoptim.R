@@ -8,6 +8,7 @@
 ##' @format WRITEME!
 ##' @source WRITEME!
 ##' mini.covtype.libsvm
+"mini.covtype.libsvm"
 
 ##' rcv1_train
 ##' @format WRITEME!

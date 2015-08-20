@@ -3,22 +3,16 @@
 \docType{data}
 \name{rcv1_train}
 \alias{rcv1_train}
-\title{mini.covtype.libsvm
-Random sample of 3000 points from covtype.libsvm}
+\title{rcv1_train}
 \format{WRITEME!}
 \source{
-WRITEME!
-mini.covtype.libsvm
-rcv1_train
-
 WRITEME!
 }
 \usage{
 rcv1_train
 }
 \description{
-mini.covtype.libsvm
-Random sample of 3000 points from covtype.libsvm
+rcv1_train
 }
 \keyword{datasets}
 

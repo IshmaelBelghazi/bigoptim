@@ -39,7 +39,7 @@ void binomial_cost_grad(double * Xt, double * y, double * w, double lambda,
 
 /*  Exponential */
 double exponential_loss(double y, double innerProd);
-double exponential_grad(double y, double innerProd);
+double exponential_loss_grad(double y, double innerProd);
 double exponential_cost(double * Xt, double * y, double * w,
                      double lambda, int nSamples, int nVars);
 void exponential_cost_grad(double * Xt, double * y, double * w, double lambda,

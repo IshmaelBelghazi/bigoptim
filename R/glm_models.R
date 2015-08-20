@@ -8,7 +8,7 @@
            .R_gaussian_cost(X=X, y=y, w=w, lambda=lambda)
          },
          C={
-           stop("not implemented yet")
+           .C_gaussian_cost(X=X, y=y, w=w, lambda=lambda)
          },
          stop("unrecognized backend"))
 }
@@ -19,7 +19,7 @@
            .R_gaussian_cost_grad(X=X, y=y, w=w, lambda=lambda)
          },
          C={
-           stop("not implemented yet")
+           .C_gaussian_cost_grad(X=X, y=y, w=w, lambda=lambda)
          },
          stop("unrecognized backend"))
 }
@@ -27,14 +27,18 @@
 ##' @export
 .R_gaussian_cost <- function(X, y, w, lambda=0) {
   innerProd <- X %*% w
-  losses <- 0.5 * (innerProd - y)^2
+  losses <- 0.5 * (y - innerProd)^2
   loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
 }
 
 ##' @export
 .R_gaussian_cost_grad <- function(X, y, w, lambda=0) {
-  grads <- diag(c(X %*% w - y)) %*% X 
-  matrix(colMeans(grads)/NROW(X) + lambda * w, ncol=1)
+  grad <- matrix(0, nrow=NROW(w), ncol=1)
+  for (i in 1:NROW(X)) {
+    term = -(y[i] - X[i, ] %*% w)
+    grad <- grad + term * X[i, ]
+  }
+  grad/NROW(X) + lambda * w
 }
 
 ##' @export
@@ -82,7 +86,8 @@
 .R_binomial_cost <- function(X, y, w, lambda=0) {
   innerProd <- X  %*% w
   losses <- log(1 + exp(-y * innerProd))
-  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
+  cost <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
+  cost
 }
 ##' @export
 .R_binomial_cost_grad <- function(X, y, w, lambda=0) {
@@ -96,7 +101,6 @@
 
 ##' @export
 ##' @useDynLib bigoptim, .registration=TRUE
-
 .C_binomial_cost <- function(X, y, w, lambda=0) {
   .Call("C_binomial_cost", t(X), y, w, lambda)
 }

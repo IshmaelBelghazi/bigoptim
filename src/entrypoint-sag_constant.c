@@ -86,7 +86,7 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
       break;
     case EXPONENTIAL:
       model.loss = exponential_loss;
-      model.grad = exponential_grad;
+      model.grad = exponential_loss_grad;
       break;
     case POISSON:
       model.loss = poisson_loss;
