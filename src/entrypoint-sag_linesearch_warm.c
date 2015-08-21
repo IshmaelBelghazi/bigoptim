@@ -1,31 +1,30 @@
-#include "entrypoint-sag_constant.h"
-
-/* Constant */
-const static int DEBUG = 0;
-
-/*============\
-| entry-point |
-\============*/
-
+#include "entrypoint-sag_linesearch_warm.h"
 /**
- * Logistic regression stochastic average gradient trainer
+ *     Logistic regression stochastic average gradient trainer
  *
- * @param w(p, 1) weights
- * @param Xt(p, n) real fature matrix
- * @param y(n, 1) {-1, 1} target matrix
- * @param lambda scalar regularization parameter
- * @param stepSize scalar constant step size
- * @param iVals(max_iter, 1) sequence of examples to choose
- * @param d(p, 1) approximation of average gradient
- * @param g(n, 1) previous derivatives of loss
- * @param covered(n, 1) whether the example has been visited
- * @return optimal weights (p, 1)
- *
+ *     @param w(p, 1) weights
+ *     @param Xt(p, n) real feature matrix
+ *     @param y(n, 1) {-1, 1} target matrix
+ *     @param lambda scalar regularization parameters
+ *     @param stepSize scalar constant step size
+ *     @param iVals(max_iter, 1) sequence of examples to choose
+ *     @param d(p, 1) initial approximation of average gradient
+ *     @param g(n, 1) previous derivatives of loss
+ *     @param covered(n, 1) whether the example has been visited
+ *     @param stepSizeType scalar default is 1 to use 1/L, set to 2 to
+ *     use 2/(L + n*myu)
+ *     @return optimal weights (p, 1)
  */
-SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
-                    SEXP stepSize, SEXP iVals, SEXP dInit, SEXP gInit,
-                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse,
-                    SEXP monitor) {
+
+const static double precision = 1.490116119384765625e-8;
+
+SEXP C_sag_linesearch_warm(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
+                           SEXP stepSizeInit, SEXP iVals, SEXP dInit, SEXP gInit,
+                           SEXP coveredInit, SEXP stepSizeType, SEXP family, SEXP tol,
+                           SEXP sparse) {
+
+
+
   /* Initializing garbage collection protection counter */
   int nprot = 0;
   /* Duplicating objects to be modified */
@@ -33,6 +32,7 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   SEXP d = PROTECT(duplicate(dInit)); nprot++;
   SEXP g = PROTECT(duplicate(gInit)); nprot++;
   SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
+  SEXP stepSize = PROTECT(duplicate(stepSizeInit)); nprot++;
 
   /*======\
   | Input |
@@ -42,7 +42,9 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                        .iVals = INTEGER(iVals),
                        .covered = INTEGER(covered),
                        .nCovered = 0,
-                       .sparse = *INTEGER(sparse)};
+                       .sparse = *INTEGER(sparse),
+                       .Li = REAL(stepSize)};
+
   CHM_SP cXt;
   if (train_set.sparse) {
     cXt = AS_CHM_SP(Xt);
@@ -62,30 +64,19 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
     train_set.nVars = INTEGER(GET_DIM(Xt))[0];
   }
   /* Initializing Trainer */
-  GlmTrainer trainer = {.lambda = *REAL(lambda),
-                        .alpha = *REAL(stepSize),
+  GlmTrainer trainer = {.alpha = *REAL(stepSize),
                         .d = REAL(d),
                         .g = REAL(g),
                         .iter_count = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
-                        .monitor = *INTEGER(monitor)};
-  /* Monitoring weights */
-  int n_passes = trainer.maxIter / train_set.nSamples;
-  SEXP monitor_w;
-  if (trainer.monitor) {
-    monitor_w = PROTECT(allocMatrix(REALSXP, train_set.nVars, n_passes + 1)); nprot++;
-    Memzero(REAL(monitor_w), (n_passes + 1) * train_set.nVars);  // n_passes + 1 for inital weights
-    trainer.monitor_w = REAL(monitor_w);
-  } else {
-    monitor_w = R_NilValue;
-  }
+                        .stepSizeType = *INTEGER(stepSizeType),
+                        .precision = precision};
 
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
 
   GlmModel model = {.w = REAL(w)};
-  if (DEBUG) Rprintf("data structures initalized.\n");
   /* Choosing family */
   switch (*INTEGER(family)) {
     case GAUSSIAN:
@@ -107,7 +98,6 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
     default:
       error("Unrecognized glm family");
   }
-if (DEBUG) Rprintf("Model functions assigned. \n");
   /*===============\
   | Error Checking |
   \===============*/
@@ -130,33 +120,36 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
  if (train_set.sparse && trainer.alpha * trainer.lambda == 1) {
    error("sorry, I don't like it when Xt is sparse and alpha*lambda=1\n");
  }
-  /*==============================\
-  | Stochastic Average Gradient   |
+
+ /*==============================\
+ | Stochastic Average Gradient   |
   \==============================*/
 
-  /* Counting covered examples*/
-  count_covered_samples(&train_set);
-  /* Training */
-  sag_constant(&trainer, &model, &train_set);
+ /* Initializing lambda/weights Matrix*/
+ SEXP lambda_w = PROTECT(allocMatrix(REALSXP, LENGTH(lambdas), train_set.nVars)); nprot++;
+ Memzero(REAL(lambda_w), LENGTH(lambdas) * train_set.nVars);
+ /* Counting covered examples*/
+ count_covered_samples(&train_set);
+ /* Training */
+ sag_linesearch_warm(&trainer, &model, &train_set,
+                     REAL(lambdas), LENGTH(lambdas), REAL(lambda_w));
+/*=======\
+| Return |
+\=======*/
+ /* Preparing return variables  */
+ SEXP convergence_code = PROTECT(allocVector(INTSXP, 1)); nprot++;
+ *INTEGER(convergence_code) = -1;//convergence_code;
+ SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
+ *INTEGER(iter_count) = trainer.iter_count;
 
-  /*=======\
-  | Return |
-  \=======*/
-  /* Preparing return variables  */
-  SEXP convergence_code = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(convergence_code) = -1;//convergence_code;
-  SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(iter_count) = trainer.iter_count;
+ /* Assigning variables to SEXP list */
+ SEXP results = PROTECT(allocVector(VECSXP, 7)); nprot++;
+ INC_APPLY(SEXP, SET_VECTOR_ELT, results, lambda_w, d, g, covered, stepSize, convergence_code, iter_count); // in utils.h
+ /* Creating SEXP for list names */
+ SEXP results_names = PROTECT(allocVector(STRSXP, 7)); nprot++;
+ INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "lambda_w", "d", "g", "covered", "stepSize", "convergence_code", "iter_count");
+ setAttrib(results, R_NamesSymbol, results_names);
 
-  /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 7)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w, d, g, covered, convergence_code, iter_count, monitor_w); // in utils.h
-  /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 7)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter_count", "monitor_w");
-  setAttrib(results, R_NamesSymbol, results_names);
-
-  UNPROTECT(nprot);
-  return results;
+ UNPROTECT(nprot);
+ return results;
 }
-

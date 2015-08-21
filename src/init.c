@@ -5,6 +5,9 @@
 #include "entrypoint-sag_constant.h"
 #include "entrypoint-sag_linesearch.h"
 #include "entrypoint-sag_adaptive.h"
+#include "entrypoint-sag_constant_warm.h"
+#include "entrypoint-sag_linesearch_warm.h"
+#include "entrypoint-sag_adaptive_warm.h"
 /* ENTRY POINTS -- END */
 
 /* TEMPORARY -- START */
@@ -19,6 +22,7 @@
 /** function that registers native routines  */
 static R_CallMethodDef CallEntries[] = {
 
+  /* Cost and Gradient functions*/
   CALLDEF(C_binomial_cost, 4),
   CALLDEF(C_binomial_cost_grad, 4),
   CALLDEF(C_gaussian_cost, 4),
@@ -27,9 +31,14 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_exponential_cost_grad, 4),
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
+  /* SAG fit*/
   CALLDEF(C_sag_constant, 13),
   CALLDEF(C_sag_linesearch, 14),
   CALLDEF(C_sag_adaptive, 15),
+  /* SAG fit with warmstarting*/
+  CALLDEF(C_sag_constant_warm, 12),
+  CALLDEF(C_sag_linesearch_warm, 13),
+  CALLDEF(C_sag_adaptive_warm, 14),
   /* TEMPORARY -- STARTS*/
   CALLDEF(C_sparse_test, 1),
   CALLDEF(C_sag_constant_mark, 9),
