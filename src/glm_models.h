@@ -1,8 +1,6 @@
 #ifndef GLM_MODELS_H_
 #define GLM_MODELS_H_
-#include <math.h>
-#include <R.h>
-#include <R_ext/BLAS.h>
+#include "sag_common.h"
 
 /* Loss functions pointer */
 typedef double (*loss_fun)(double, double);

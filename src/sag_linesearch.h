@@ -1,9 +1,6 @@
 #ifndef SAG_LINESEARCH_H_
 #define SAG_LINESEARCH_H_
-#include <R.h>
-#include <Rdefines.h>
-#include <Rinternals.h>
-#include <R_ext/BLAS.h>
+#include "sag_common.h"
 #include "utils.h"
 #include "dataset.h"
 #include "trainers.h"

@@ -1,7 +1,6 @@
 #ifndef SAG_GLM_ENTRY_POINT_H_
 #define SAG_GLM_ENTRY_POINT_H_
-#include <R.h>
-#include <Rdefines.h>
+#include "sag_common.h"
 #include "glm_models.h"
 
 /*=========\

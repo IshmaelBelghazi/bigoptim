@@ -47,6 +47,10 @@ void attribute_hidden bigoptim_R_cholmod_error(int status,
                                                const char *message) {
   if(status < 0) {
 #ifdef Failure_in_matching_Matrix
+    /* This fails unexpectedly with
+     *  function 'cholmod_l_defaults' not provided by package 'Matrix'
+     * from ../tests/lmer-1.R 's  (l.68)  lmer(y ~ habitat + (1|habitat*lagoon)
+     */
     M_cholmod_defaults(&c);/* <--- restore defaults,
                             * as we will not be able to .. */
     c.final_ll = 1;	    /* LL' form of simplicial factorization */
@@ -77,7 +81,7 @@ void R_init_bigoptim(DllInfo *dll) {
   c.error_handler = bigoptim_R_cholmod_error;
 }
 
-/** Finalizer called upon unloading the package.
+/** Finalizer for cplm called upon unloading the package.
  *
  */
 void R_unload_bigoptim(DllInfo *dll) {

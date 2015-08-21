@@ -1,5 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
+#include "sag_common.h"
 #include "trainers.h"
 #include "glm_models.h"
 #include "dataset.h"

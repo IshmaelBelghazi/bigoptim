@@ -30,11 +30,9 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   SEXP g = PROTECT(duplicate(gInit)); nprot++;
   SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
   SEXP stepSize = PROTECT(duplicate(stepSizeInit)); nprot++;
-
   /*======\
   | Input |
   \======*/
-
   /* Initializing dataset */
   Dataset train_set = {.y = REAL(y),
                        .iVals = INTEGER(iVals),
@@ -107,8 +105,6 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
     default:
       error("Unrecognized glm family");
   }
-
-
   /*===============\
   | Error Checking |
   \===============*/
@@ -127,12 +123,6 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   if (train_set.nSamples != INTEGER(GET_DIM(covered))[0]) {
     error("covered and y must have the same number of rows");
   }
-  // TODO(Ishmael): SAGlineSearch_logistic_BLAS.c line 72
-  /* if (sparse && alpha * lambda == 1) { // BUG(Ishmael): BUG is mark's */
-  /*                   // code alpha is not declared yet. */
-  /*   error("Sorry, I don't like it when Xt is sparse and alpha*lambda=1\n"); */
-  /* } */
-
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
@@ -140,7 +130,6 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   count_covered_samples(&train_set);
   /* Training */
   sag_linesearch(&trainer, &model, &train_set);
-
   /*=======\
   | Return |
   \=======*/

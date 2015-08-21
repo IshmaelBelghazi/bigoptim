@@ -1,7 +1,4 @@
-#include <R.h>
-#include <Rdefines.h>
-#include "glm_models.h"
-
+#include "entrypoint-glm.h"
 /*=========\
 | BINOMIAL |
 \=========*/

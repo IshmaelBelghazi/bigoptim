@@ -6,7 +6,6 @@ const static int DEBUG = 1;
 void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   /* Unpacking Structs */
-
   /* Dataset */
   double *y = dataset->y;
   double *Xt = dataset->Xt;
