@@ -6,12 +6,13 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     iVals=NULL, d=NULL, g=NULL, covered=NULL, standardize=FALSE,
                     randVals=NULL,
-                    tol=1e-3, model="binomial", fit_alg="constant", ...) {
+                    tol=1e-3, model="binomial", fit_alg="constant",
+                    monitor=FALSE, ...) {
   ## if (length(grep("CMatrix", class(X))) > 0) {
   ##   stop("sparse matrices support not implemented yet.")
   ## }
 
-  sparse <- if (class(X) == "dgCMatrix") 1 else 0
+  sparse <- is.sparse(X)
   ##,-------------------
   ##| Data preprocessing
   ##`-------------------
@@ -63,12 +64,12 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
          constant={
            if (is.null(stepSize)) {
              Lmax <- 0.25 * max(Matrix::rowSums(X^2)) + lambda
-             stepSize <- 1/(16 * Lmax)  ## 1/L
+             stepSize <-  1/Lmax ## 1/(16 * Lmax)
            }
            ## Calling C function
            sag_fit <- .Call("C_sag_constant", w, Matrix::t(X), y, lambda, stepSize,
                             iVals, d, g, covered, as.integer(model_id), tol,
-                            as.integer(sparse))
+                            as.integer(sparse), as.integer(monitor))
          },
          linesearch={
            if (is.null(stepSize)) {
@@ -78,7 +79,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            ## Calling C function
            sag_fit <- .Call("C_sag_linesearch", w, Matrix::t(X), y, lambda, stepSize, iVals, d, g, covered,
                             as.integer(stepSizeType), as.integer(model_id), tol,
-                            as.integer(sparse))
+                            as.integer(sparse), as.integer(monitor))
          },
          adaptive={        
            if (is.null(Lmax)) {
@@ -96,14 +97,15 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, stepSize=NULL,
            sag_fit <- .Call("C_sag_adaptive", w, Matrix::t(X), y, lambda,
                             Lmax, Li, randVals,
                             d, g, covered, increasing, as.integer(model_id), tol,
-                            as.integer(sparse))
+                            as.integer(sparse), as.integer(monitor))
          },
          stop("unrecognized fit algorithm"))
   
   ##,---------------------------
   ##| Structuring SAG_fit object
   ##`---------------------------
-  sag_fit$input <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize)
+  sag_fit$.call <- sapply(match.call(expand.dots=TRUE)[-1], deparse) 
+  sag_fit$input <- list(maxiter=maxiter, model=model, lambda=lambda, tol=tol, stepSize=stepSize, fit_alg=fit_alg)
   class(sag_fit) <- "SAG_fit"
   sag_fit
 }

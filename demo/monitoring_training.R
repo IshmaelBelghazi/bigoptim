@@ -1,349 +1,107 @@
-rm(list=ls())
 suppressPackageStartupMessages(library(ggplot2))
-suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(glmnet))
-family <- 1  ## 1 for Bernoulli
 ## Loading Data set
 data(covtype.libsvm)
 ## Normalizing Columns and adding intercept
 X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
 y <- covtype.libsvm$y
-##X <- X[1:1000, , drop=FALSE]
-##y <- y[1:1000, , drop=FALSE]
 y[y == 2] <- -1
+n <- NROW(X)
+p <- NCOL(X)
 ## Setting seed
-set.seed(0)
+#set.seed(0)
 ## Setting up problem
-## Number of lambdas to compute
-nlambda <- 5
-## Getting lambdas grid
+n_passes <- 50  ## number of passses trough the dataset
+maxiter <- n * n_passes
+lambda <- 1/n 
+tol <- 0
 
-glmnet_fit <- glmnet(X, as.factor(y), alpha=0, family="binomial",
-                     nlambda=nlambda, standardize=FALSE, intercept=FALSE)
-lambdas <- rev(glmnet_fit$lambda)
+model <- "binomial"
+fit_algs <- list(constant="constant",
+                 linesearch="linesearch",
+                 adaptive="adaptive")
+
+sag_fits <- lapply(fit_algs, function(fit_alg) sag_fit(X, y,
+                                                   lambda=lambda,
+                                                   maxiter=maxiter,
+                                                   model=model,
+                                                   fit_alg=fit_alg,
+                                                   standardize=FALSE,
+                                                   tol=tol, monitor=TRUE))
+print(lapply(sag_fits, function(sag_fit) get_cost(sag_fit, X, y)))
+
+## Functions --------------------------------------------------------------------
+make_monitor_table <- function(object, X, y, omit_init_state=TRUE) {
+  monitor_fun <- list(cost=function(w)
+                             .C_binomial_cost(X, y, w,
+                                              object$input$lambda),
+                      grad_norm=function(w)
+                                  norm(.C_binomial_cost_grad(X, y, w,
+                                                             object$input$lambda),
+                                       type='F'))
+  monitor_w <- object$monitor_w
+  if (omit_init_state) {
+    monitor_w <- monitor_w[, -1, drop=FALSE]
+  }
+  mon <- lapply(monitor_fun, function(fun) apply(monitor_w, 2, fun))
+  mon$effective_pass <- seq(0, length(mon$cost) - 1)
+  if (omit_init_state) {
+    mon$effective_pass <- mon$effective_pass + 1
+  }
+  mon$fit_alg <- rep(object$input$fit_alg, length(mon$cost))
+  as.data.frame(mon)
+}
+## Glmnet training table
+make_glmnet_monitor_table <- function(X, y, lambda, n_passes) {
+
+  glmnet_fit <- glmnet(X, as.factor(y), alpha=0, family="binomial",
+                       lambda=lambda, standardize=FALSE, intercept=FALSE)
+  glmnet_w <- as.matrix(coef(glmnet_fit))[-1]
+  glm_cost <- .C_binomial_cost(X, y, glmnet_w, lambda=lambda)
+  glm_cost_grad <- norm(.C_binomial_cost_grad(X, y, glmnet_w, lambda=lambda), 'F')
+  effective_pass <- 1:n_passes
+  data.frame(cost=rep(glm_cost, n_passes),
+             grad_norm=rep(glm_cost_grad, n_passes),
+             effective_pass=effective_pass,
+             fit_alg="glmmnet")}
 
 
-algs <- list(constant=list(fit_alg="constant",
-                           params=list(covered=NULL,
-                                       w=NULL,
-                                       d=NULL,
-                                       g=NULL,
-                                       stepSize=NULL
-                                       )),
-             ls=list(fit_alg="linesearch",
-                     params=list(covered=NULL,
-                                 w=NULL,
-                                 d=NULL,
-                                 g=NULL,
-                                 stepSize=NULL
-                                 )))
 ## Training monitoring functions
-monitor_training_by_iter <- function(X, y, lambda, iVals,
-                                     trainers_list=trainers,
-                                     maxiter=NROW(X) * 50,
-                                     tol=0,
-                                     training_periods=50,
-                                     model="binomial",
-                                     verbose=TRUE, ...) {
+## Make graphs
+make_graph_by_pass <- function(training_table) {
 
-  iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE),
-                  nrow=maxiter, ncol=1)
-  ## Number of training period (number of intervals from 1 to maxiter)
-  training_breaks <- c(seq(1, NROW(iVals) - NROW(iVals) %% training_periods,
-                           by=NROW(iVals) %/% training_periods), NROW(iVals))
-  training_table <- data.frame(iteration=numeric(),
-                               grad_norm=numeric(),
-                               cost=numeric(),
-                               fit_alg=character())
-  ## Training with warm starting.
-  for (i in 1:training_periods) {
-  if(verbose) {
-    print(sprintf("Processing training period: %d/%d", i, training_periods))
-  }
-    iVals_i <- iVals[training_breaks[i]:training_breaks[i + 1],, drop=FALSE]
-    ## Fitting model
-    fits_i <- lapply(algs, function(alg) {
-      if (verbose) {
-        print(sprintf("Processing alg: %s", alg$fit_alg))
-      }
-      fit <- sag_fit(X, y, lambda, maxiter=NROW(iVals_i),
-                     iVals=iVals_i, d=alg$params$d, g=alg$params$g,
-                     covered=alg$params$covered,
-                     stepSize=alg$params$stepSize,
-                     tol=tol,
-                     model=model,
-                     fit_alg=alg$fit_alg)
-      fit <- list(params=fit[names(alg$params)])
-      fit
-    })
-    for (alg_name in names(algs)) {
-      algs[[alg_name]]$params$w <- fits_i[[alg_name]]$w
-      algs[[alg_name]]$params$d <- fits_i[[alg_name]]$d
-      algs[[alg_name]]$params$g <- fits_i[[alg_name]]$g
-      algs[[alg_name]]$params$stepSize <- fits_i[[alg_name]]$stepSize
-    }
-    algs <- modifyList(algs, fits_i, keep.null=TRUE)
-    ## Computing gradient norm and loss
-    results_i <- mapply(function(algs, algs_name) {
-      data.frame(iteration=training_breaks[i + 1],
-                 grad_norm=norm(grad_fun(X, y,
-                                         trainer$params$w,
-                                         lambda=lambda), 'F'),
-                 cost=cost_fun(X, y,
-                               alg$params$w, lambda=lambda),
-                 fit_alg=algs_name)},
-                 algs, names(algs),
-                 USE.NAMES=FALSE,
-                 SIMPLIFY=FALSE)
-    training_table <- rbind(training_table, do.call(rbind, results_i))
-  }
-  ## Adding glmnet
-  return(training_table)
-}
-
-monitor_training_by_tol <- function(X, y, lambda, iVals,
-                                    trainers_list=trainers,
-                                    maxiter=NROW(X) * 10,
-                                    tols,
-                                    grad_fun=.bernoulli_cost_grad,
-                                    cost_fun=.bernoulli_cost_C,
-                                    verbose=TRUE, ...) {
-
-  iVals <- matrix(sample.int(NROW(X), size=maxiter, replace=TRUE),
-                  nrow=maxiter, ncol=1)
-  training_table <- data.frame(tol=numeric(),
-                               grad_norm=numeric(),
-                               cost=numeric(),
-                               fit_alg=character())
-  ## Training with warm starting.
-  for (i in 1:length(tols)) {
-    if(verbose) {
-      print(sprintf("Processing with tolerance: %f", tols[i]))
-    }
-    ## Fitting model
-    fits_i <- lapply(trainers, function(model) {
-      fit <- model$fun(X, y, wInit=model$params$w, lambda=lambda,
-                       iVals=iVals,
-                       d=model$params$d,
-                       g=model$params$g,
-                       covered=model$params$covered,
-                       tol=tols[i],
-                       family=family)
-      fit <- list(params=fit[names(model$params)])
-      fit
-    })
-    trainers <- modifyList(trainers, fits_i, keep.null=TRUE)
-    ## Computing gradient norm and loss
-    results_i <- mapply(function(trainer, trainer_name) {
-      data.frame(tol=tols[i],
-                 grad_norm=norm(grad_fun(X, y,
-                                         trainer$params$w,
-                                         lambda=lambda), 'F'),
-                 cost=cost_fun(X, y,
-                               trainer$params$w, lambda=lambda),
-                 fit_alg=trainer_name)},
-                 trainers, names(trainers),
-                 USE.NAMES=FALSE,
-                 SIMPLIFY=FALSE)
-    training_table <- rbind(training_table, do.call(rbind, results_i))
-  }
-  return(training_table)
-}
-
-## Monitoring by iteration
-training_periods <- 100
-maxIter <- NROW(X) * 100
-training_tables_by_iter <- lapply(lambdas, function(lambda) monitor_training_by_iter(X, y, lambda=lambda,
-                                                                                     iVals=iVals,
-                                                                                     maxiter=maxIter,
-                                                                                     training_periods=training_periods,
-                                                                                     grad_fun=.bernoulli_cost_grad_C,
-                                                                                     cost_fun=,bernoulli_cost_C,
-                                                                                     tol=0))
-
-names(training_tables_by_iter) <- paste0("lambda_", lambdas)
-training_tables_by_iter <- lapply(training_tables_by_iter, function(training_table) {
   training_table$fit_alg <- as.factor(training_table$fit_alg)
-  training_table
-})
+  ## Cost monitoring graph
+  cost_graph <- ggplot(training_table,
+                       aes(x=effective_pass,
+                           y=cost,
+                           color=fit_alg)) +
+    geom_line() +
+    xlab("Effective pass") +
+    ylab("cost") +
+    ggtitle("cost vs effective passes")
+  ## Gradient Frobenius norm monitoring graph
+  grad_norm_graph <- ggplot(training_table,
+                       aes(x=effective_pass,
+                           y=grad_norm,
+                           color=fit_alg)) +
+    geom_line() +
+    scale_y_log10() +
+    xlab("Effective pass") +
+    ylab("grad_norm") +
+    ggtitle("grad_norm vs effective passes")
 
-## Monitoring by tolerance
-tols <- c(1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6)
-maxIter <- NROW(X) * 10
-training_tables_by_tol <- lapply(lambdas, function(lambda) monitor_training_by_tol(X, y, lambda=lambda, iVals=iVals,
-                                                                                   maxiter=maxIter,
-                                                                                   trainers_list=trainers,
-                                                                                   grad_fun=.bernoulli_cost_grad_C,
-                                                                                   cost_fun=.bernoulli_cost_C,
-                                                                                   tols=tols))
 
-names(training_tables_by_tol) <- paste0("lambda_", lambdas)
-training_tables_by_tol <- lapply(training_tables_by_tol, function(training_table) {
-  training_table$fit_alg <- as.factor(training_table$fit_alg)
-  training_table
-})
-
-## Graphs by iterations
-make_graph_by_iter <- function(training_tables) {
-
-  training_graphs <- list()
-  for(table in names(training_tables)) {
-    training_table <- training_tables[[table]]
-    cost_graph <- ggplot(training_table, aes(x=iteration,
-                                             y=cost,
-                                             color=fit_alg)) +
-      geom_line() +
-      xlab("Iterations") +
-      ylab("Cost") +
-      ggtitle(paste("Cost vs iterations, ", table, sep=" "))
-
-    grad_norm_graph <- ggplot(training_table, aes(x=iteration,
-                                                  y=grad_norm,
-                                                  color=fit_alg)) +
-      geom_line() +
-      xlab("Iterations") +
-      ylab("l2 norm of Cost Gradient ")+
-      ggtitle(paste0("Gradient norm vs Iterations, ", table, sep=" "))
-
-    ## Assigning graph to list
-    training_graphs[[table]] <- list(cost=cost_graph,
-                                     grad=grad_norm_graph)
-  }
-  return(training_graphs)
+  list(cost=cost_graph, grad_norm=grad_norm_graph)
 }
-
-training_graphs_by_iter <- make_graph_by_iter(training_tables_by_iter)
-
-## Graphs by Tolerance
-make_graph_by_tol <- function(training_tables) {
-  
-  training_graphs <- list()
-  for(table in names(training_tables)) {
-    training_table <- training_tables[[table]]
-    cost_graph <- ggplot(training_table, aes(x=tol,
-                                             y=cost,
-                                             color=fit_alg)) +
-      geom_line() +
-      xlab("Tolerance") +
-      scale_x_reverse() +
-      ylab("Cost") +
-      ggtitle(paste("Cost vs tolerance, ", table, sep=" "))
-
-    grad_norm_graph <- ggplot(training_table, aes(x=tol,
-                                                  y=grad_norm,
-                                                  color=fit_alg)) +
-      geom_line() +
-      xlab("Tolerance") +
-      scale_x_reverse() +
-      ylab("l2 Norm of Cost Gradient") +
-      ggtitle(paste0("Gradient norm vs Tolerance, ", table, sep=" "))
-
-    ## Assigning graph to list
-    training_graphs[[table]] <- list(cost=cost_graph,
-                                     grad=grad_norm_graph)
-  }
-  return(training_graphs)
-}
-
-training_graphs_by_tol <- make_graph_by_tol(training_tables_by_tol)
-## Make training monitoring graphs
-## make_training_graphs <- function(training_tables, log_grad_norm=FALSE) {
-##   training_graphs <- list()
-##   if (log_grad_norm) {
-##     iter_title <- "Approximate gradient log l2 norm"
-##     training_tables <- lapply(training_tables, function(table) {
-##       table$tol <- log(table$tol) 
-##     })
-##   } else {
-##     iter_title <- "Approximate gradient l2 norm"
-##   }
-##   for(table in names(training_tables)) {
-##     training_table <- training_tables[[table]]
-##     cost_graph <- ggplot(training_table, aes(x=tol,
-##                                              y=cost,
-##                                              color=fit_alg)) +
-##       geom_line() +
-##       xlab(iter_title) +
-##       scale_x_reverse() +
-##       ylab("Average l2 regularized Cost") +
-##       ggtitle(paste("Cost vs", iter_title, table, sep=" "))
-##     grad_norm_graph <- ggplot(training_table, aes(x=tol,
-##                                                   y=grad_norm,
-##                                                   color=fit_alg)) +
-##       geom_line() +
-##       xlab(iter_title) +
-##       scale_x_reverse() +
-##       ylab("Frobenius norm of average l2 regularized cost gradient ")+
-##       ggtitle(paste0("Gradient norm vs", iter_title, table, sep=" "))
-##     ## Assigning graph to list
-##     training_graphs[[table]] <- list(cost=cost_graph,
-##                                      grad=grad_norm_graph)
-##   }
-##   return(training_graphs)
-## }
-
-## training_graphs <- make_training_graphs(training_tables, log_grad_norm=FALSE)
- 
-## Multiplot function
-# Multiple plot function
-#
-# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# - cols:   Number of columns in layout
-# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-#
-# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-# then plot 1 will go in the upper left, 2 will go in the upper right, and
-# 3 will go all the way across the bottom.
-#
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-
-  numPlots = length(plots)
-
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                    ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-
- if (numPlots==1) {
-    print(plots[[1]])
-
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
-
-## Plotting cost graphs by iter
-ncols <- ceiling(length(lambdas)/2)
-png("training_graphs_by_iter_cost.png", width=1980, height=1080)
-multiplot(plotlist=lapply(training_graphs_by_iter, function(graph) graph$cost), cols=ncols)
-dev.off()
-## Plotting Gradient graphs
-png("training_graphs_by_iter_grad.png", width=1980, height=1080)
-multiplot(plotlist=lapply(training_graphs_by_iter, function(graph) graph$grad), cols=ncols)
-dev.off()
-png("training_graphs_by_tol_cost.png", width=1980, height=1080)
-multiplot(plotlist=lapply(training_graphs_by_tol, function(graph) graph$cost), cols=ncols)
-dev.off()
-## Plotting Gradient graphs
-png("training_graphs_by_tol_grad.png", width=1980, height=1080)
-multiplot(plotlist=lapply(training_graphs_by_tol, function(graph) graph$grad), cols=ncols)
-dev.off()
+## Monitoring ------------------------------------------------------------------
+training_tables <- lapply(sag_fits, function(sag_fit)
+                                      make_monitor_table(sag_fit,
+                                                         X, y, 
+                                                         omit_init_state=TRUE))
+## Adding glmnet estimation
+training_tables$glmnet <- make_glmnet_monitor_table(X, y, lambda=lambda, n_passes=n_passes)
+training_table <- do.call(function(...) rbind(... , make.row.names=FALSE), training_tables)
+monitor_graphs <- make_graph_by_pass(training_table)
+plot(monitor_graphs$cost)
+plot(monitor_graphs$grad_norm)

@@ -21,7 +21,7 @@ const static double precision = 1.490116119384765625e-8;
 SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                       SEXP stepSizeInit, SEXP iVals, SEXP dInit, SEXP gInit,
                       SEXP coveredInit, SEXP stepSizeType, SEXP family, SEXP tol,
-                      SEXP sparse) {
+                      SEXP sparse, SEXP monitor) {
   /* Initializing protection counter */
   int nprot = 0;
   /* Duplicating objects to be modified */
@@ -70,8 +70,19 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
                         .tol = *REAL(tol),
                         .stepSizeType = *INTEGER(stepSizeType),
-                        .precision = precision};
+                        .precision = precision,
+                        .monitor = *INTEGER(monitor)};
 
+  /* Monitoring weights */
+  int n_passes = trainer.maxIter / train_set.nSamples;
+  SEXP monitor_w;
+  if (trainer.monitor) {
+    monitor_w = PROTECT(allocMatrix(REALSXP, train_set.nVars, n_passes + 1)); nprot++;
+    Memzero(REAL(monitor_w), (n_passes + 1) * train_set.nVars);  // n_passes + 1 for inital weights
+    trainer.monitor_w = REAL(monitor_w);
+  } else {
+    monitor_w = R_NilValue;
+  }
   /* Initializing Model */
   GlmModel model = {.w = REAL(w)};
 
@@ -125,35 +136,25 @@ SEXP C_sag_linesearch(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
-
   /* Counting*/
   count_covered_samples(&train_set);
   /* Training */
   sag_linesearch(&trainer, &model, &train_set);
+
   /*=======\
   | Return |
   \=======*/
-  /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), model.w, train_set.nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
-  // TODO(Ishmael): check g dimesionality
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
-  SEXP stepSize_return = PROTECT(allocVector(REALSXP, 1)); nprot++;
-  *REAL(stepSize_return) = *train_set.Li;
-  SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(convergence_code_return) = -1;
+  SEXP convergence_code= PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(convergence_code) = -1;
+  SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(iter_count) = trainer.iter_count;
 
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, stepSize_return, convergence_code_return); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 8)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w, d, g, covered, stepSize, convergence_code, iter_count, monitor_w); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "stepSize","convergence_code");
+  SEXP results_names = PROTECT(allocVector(STRSXP, 8)); nprot++;
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "stepSize","convergence_code", "iter_count", "monitor_w");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);

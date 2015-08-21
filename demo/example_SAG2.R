@@ -17,7 +17,7 @@ tol <- 0
 ## SAG with Constant step size
 print("Running Stochastic Average Gradient with constant step size")
 sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
-                            family=family, tol=tol, model="binomial",
+                            tol=tol, model="binomial",
                             fit_alg="constant", standardize=FALSE)
 cost_constant <- get_cost(sag_constant_fit, X, y)
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513607",

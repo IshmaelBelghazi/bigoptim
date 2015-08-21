@@ -24,7 +24,8 @@ const static int DEBUG = 0;
  */
 SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP dInit, SEXP gInit,
-                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse) {
+                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse,
+                    SEXP monitor) {
   /* Initializing garbage collection protection counter */
   int nprot = 0;
   /* Duplicating objects to be modified */
@@ -67,7 +68,18 @@ SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                         .g = REAL(g),
                         .iter_count = 0,
                         .maxIter = INTEGER(GET_DIM(iVals))[0],
-                        .tol = *REAL(tol)};
+                        .tol = *REAL(tol),
+                        .monitor = *INTEGER(monitor)};
+  /* Monitoring weights */
+  int n_passes = trainer.maxIter / train_set.nSamples;
+  SEXP monitor_w;
+  if (trainer.monitor) {
+    monitor_w = PROTECT(allocMatrix(REALSXP, train_set.nVars, n_passes + 1)); nprot++;
+    Memzero(REAL(monitor_w), (n_passes + 1) * train_set.nVars);  // n_passes + 1 for inital weights
+    trainer.monitor_w = REAL(monitor_w);
+  } else {
+    monitor_w = R_NilValue;
+  }
 
   /* Initializing Model */
   // TODO(Ishmael): Model Dispatch should go here
@@ -130,25 +142,17 @@ if (DEBUG) Rprintf("Model functions assigned. \n");
   | Return |
   \=======*/
   /* Preparing return variables  */
-  SEXP w_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(w_return), model.w, train_set.nVars);
-  SEXP d_return = PROTECT(allocMatrix(REALSXP, train_set.nVars, 1)); nprot++;
-  Memcpy(REAL(d_return), trainer.d, train_set.nVars);
-  SEXP g_return = PROTECT(allocMatrix(REALSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(REAL(g_return), trainer.g, train_set.nSamples);
-  SEXP covered_return = PROTECT(allocMatrix(INTSXP, train_set.nSamples, 1)); nprot++;
-  Memcpy(INTEGER(covered_return), train_set.covered, train_set.nSamples);
-  SEXP convergence_code_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(convergence_code_return) = -1;//convergence_code;
-  SEXP iter_count_return = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(iter_count_return) = trainer.iter_count;
+  SEXP convergence_code = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(convergence_code) = -1;//convergence_code;
+  SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
+  *INTEGER(iter_count) = trainer.iter_count;
 
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 6)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w_return, d_return, g_return, covered_return, convergence_code_return, iter_count_return); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 7)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w, d, g, covered, convergence_code, iter_count, monitor_w); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 6)); nprot++;
-  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter_count");
+  SEXP results_names = PROTECT(allocVector(STRSXP, 7)); nprot++;
+  INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g", "covered", "convergence_code", "iter_count", "monitor_w");
   setAttrib(results, R_NamesSymbol, results_names);
 
   UNPROTECT(nprot);

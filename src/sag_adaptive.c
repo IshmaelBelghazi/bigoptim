@@ -1,7 +1,7 @@
 #include "sag_adaptive.h"
 
 const static int one = 1;
-const static int DEBUG = 0;
+const static int DEBUG = 1;
 
 void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
@@ -56,13 +56,16 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   /* Approximate gradients*/
   double *g = trainer->g;
   double *d = trainer->d;
+  /* Monitoring */
+  int monitor = trainer->monitor;
+  double * monitor_w = trainer->monitor_w;
 
   /* Training */
   _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples, randVals,
                 covered, unCoveredMatrix, LiMatrix, nDescendants, nCovered,
                 Lmean, nLevels, nextpow2, maxIter, lambda, alpha, precision,
                 tol, loss_function, grad_fun, sparse, jc, ir, lastVisited,
-                cumSum, d, g);
+                cumSum, d, g, monitor, monitor_w);
 
   Free(lastVisited);
   Free(cumSum);
@@ -79,7 +82,7 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
                    double alpha, double precision, double tol,
                    loss_fun loss_function, loss_grad_fun grad_fun, int sparse,
                    int *jc, int *ir, int *lastVisited, double *cumSum,
-                   double *d, double *g) {
+                   double *d, double *g, int monitor, double * monitor_w) {
 
   /* Training variables*/
   int i = 0, ind = 0;
@@ -96,6 +99,14 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
   int stop_condition = 0;
   /* Training Loop */
   int k = 0; // TODO(Ishmael): Consider using the register keyword
+  /* Monitoring */
+  int pass_num = 0; // For weights monitoring
+  if ( monitor  && k % nSamples == 0 ) {
+    if (DEBUG) {
+      R_TRACE("effective pass # %d. saving weights.", pass_num);
+    }
+    F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+  }
   while (!stop_condition) {
     /* Select next training example */
     offset = 0;
@@ -170,8 +181,9 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
 
     /* Line-search for Li */
     Li_old = Li[i];
-    if (increasing && covered[i])
+    if (increasing && covered[i]) {
       Li[i] /= 2;
+    }
     fi = loss_function(y[i], innerProd);
     /* Compute f_new as the function value obtained by taking
      * a step size of 1/Li in the gradient direction */
@@ -271,6 +283,14 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     /* Checking Stopping criterions */
     agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
+    /* Monitoring */
+    if ( monitor && k % nSamples == 0) {
+      pass_num++;
+      if (DEBUG) {
+        R_TRACE("effective pass # %d. saving weights.", pass_num);
+      }
+      F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+    }
   }
 
   if (sparse) {

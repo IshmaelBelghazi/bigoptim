@@ -1,7 +1,7 @@
 #include "sag_constant.h"
 
 const static int one = 1;
-const static int DEBUG = 0;
+const static int DEBUG = 1;
 void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
 
   /* Unpacking Structs */
@@ -44,12 +44,17 @@ void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
   double * g = trainer->g;
   double * d = trainer->d;
 
+  /* Monitoring */
+  int monitor = trainer->monitor;
+  double * monitor_w = trainer->monitor_w;
+
   /* Training */
   _sag_constant(w, Xt, y, lambda, alpha,
                 d, g, grad_fun,
                 iVals, covered, nCovered,
                 nSamples, nVars, sparse, jc, ir,
-                lastVisited, cumSum, tol, maxIter);
+                lastVisited, cumSum, tol, maxIter,
+                monitor, monitor_w);
 
   /* Deallocating */
   if (sparse) {
@@ -62,7 +67,9 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
                    double * d, double * g, loss_grad_fun grad_fun,
                    int * iVals, int * covered, double * nCovered,
                    int nSamples, int nVars, int sparse, int * jc, int * ir,
-                   int * lastVisited, double * cumSum, double tol, int maxIter) {
+                   int * lastVisited, double * cumSum, double tol, int maxIter,
+                   int monitor, double * monitor_w) {
+
   /* Training variables*/
   int i = 0;
   double c = 1.0;
@@ -73,6 +80,14 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
   int stop_condition = 0;
   /* Training Loop */
   int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  // Monitoring
+  int pass_num = 0; // For weights monitoring
+  if ( monitor  && k % nSamples == 0 ) {
+    if (DEBUG) {
+      R_TRACE("effective pass # %d. saving weights.", pass_num);
+    }
+    F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+  }
   while (!stop_condition) {
     /* Select next training example */
     i = iVals[k] - 1;
@@ -144,6 +159,15 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
   /* Checking Stopping criterions */
   agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
   stop_condition = (k >= maxIter) || (agrad_norm <= tol);
+  /* Monitoring */
+  if ( monitor && k % nSamples == 0) {
+    pass_num++;
+    if (DEBUG) {
+      R_TRACE("effective pass # %d. saving weights.", pass_num);
+    }
+    F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+  }
+
   }
 
   if (sparse) {

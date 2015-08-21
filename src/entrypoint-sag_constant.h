@@ -14,7 +14,8 @@
 
 SEXP C_sag_constant(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                     SEXP stepSize, SEXP iVals, SEXP dInit, SEXP gInit,
-                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse);
+                    SEXP coveredInit, SEXP family, SEXP tol, SEXP sparse,
+                    SEXP monitor);
 
 
 #endif /* ENTRYPOINT_SAG_CONSTANT_H_ */

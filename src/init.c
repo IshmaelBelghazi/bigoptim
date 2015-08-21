@@ -27,9 +27,9 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_exponential_cost_grad, 4),
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
-  CALLDEF(C_sag_constant, 12),
-  CALLDEF(C_sag_linesearch, 13),
-  CALLDEF(C_sag_adaptive, 14),
+  CALLDEF(C_sag_constant, 13),
+  CALLDEF(C_sag_linesearch, 14),
+  CALLDEF(C_sag_adaptive, 15),
   /* TEMPORARY -- STARTS*/
   CALLDEF(C_sparse_test, 1),
   CALLDEF(C_sag_constant_mark, 9),

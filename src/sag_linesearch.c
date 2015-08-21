@@ -1,7 +1,7 @@
 #include "sag_linesearch.h"
 
 const static int one = 1;
-const static int DEBUG = 0;
+const static int DEBUG = 1;
 
 void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
@@ -50,13 +50,17 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double *g = trainer->g;
   double *d = trainer->d;
 
+  /* Monitoring */
+  int monitor = trainer->monitor;
+  double * monitor_w = trainer->monitor_w;
+
   /* Training */
   _sag_linesearch(w, Xt, y, lambda,
                   alpha, stepSizeType, precision, Li,
                   d, g, loss_function, grad_function,
                   iVals, covered, nCovered, nVars, nSamples,
                   sparse, ir, jc, lastVisited,
-                  cumSum, maxIter, tol);
+                  cumSum, maxIter, tol, monitor, monitor_w);
 
 
   /* Deallocating */
@@ -65,11 +69,11 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 }
 
   void _sag_linesearch(double * w, double * Xt, double * y, double lambda,
-    double alpha, int stepSizeType, double precision, double * Li,
-    double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
-    int * iVals, int * covered, double * nCovered, int nVars, int nSamples,
-    int sparse, int * ir, int * jc, int * lastVisited,
-    double * cumSum, int maxIter, double tol) {
+                       double alpha, int stepSizeType, double precision, double * Li,
+                       double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
+                       int * iVals, int * covered, double * nCovered, int nVars, int nSamples,
+                       int sparse, int * ir, int * jc, int * lastVisited,
+                       double * cumSum, int maxIter, double tol, int monitor, double * monitor_w) {
 
   /* Training variables*/
   int i = 0;
@@ -83,6 +87,14 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   int stop_condition = 0;
   /* Training Loop */
   int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  /* Monitoring */
+  int pass_num = 0; // For weights monitoring
+  if ( monitor  && k % nSamples == 0 ) {
+    if (DEBUG) {
+      R_TRACE("effective pass # %d. saving weights.", pass_num);
+    }
+    F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+  }
   while (!stop_condition){
     /* Select next training example */
     i = iVals[k] - 1;
@@ -189,6 +201,14 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     /* Checking Stopping criterions */
     agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
+    /* Monitoring */
+    if ( monitor && k % nSamples == 0) {
+      pass_num++;
+      if (DEBUG) {
+        R_TRACE("effective pass # %d. saving weights.", pass_num);
+      }
+      F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
+    }
   }
 
   if (sparse) {

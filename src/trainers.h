@@ -17,6 +17,9 @@ typedef struct GlmTrainer {
                      //  + n * mu)
   double precision;
   double tol;  // Tolerance
+
+  int monitor;  // Monitor training after every pass
+  double * monitor_w;  // Monitoring weigthts
 } GlmTrainer;
 
 /* trainer type enum */

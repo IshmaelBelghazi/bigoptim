@@ -16,5 +16,6 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
                    double * d, double * g, loss_grad_fun grad_fun,
                    int * iVals, int * covered, double * nCovered,
                    int nSamples, int nVars, int sparse, int * jc, int * ir,
-                   int * lastVisited, double * cumSum, double tol, int maxIter);
+                   int * lastVisited, double * cumSum, double tol, int maxIter,
+                   int monitor, double * monitor_w);
 #endif /* SAG_CONSTANT_H_ */
