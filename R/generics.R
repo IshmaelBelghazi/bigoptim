@@ -15,7 +15,7 @@ get_cost.default <- function(object, X, y, ...) {
 }
 ##' @export
 get_cost.SAG_fit <- function(object, X, y, ...) {
-  backend <- if(is.sparse(object$X)) "R" else "C"
+  backend <- if(is.sparse(X)) "R" else "C"
   switch(object$input$model,
          binomial={
            .binomial_cost(X=X, y=y, w=coef(object),
@@ -45,7 +45,7 @@ get_grad.default <- function(object, X, y, ...) {
 }
 ##' @export
 get_grad.SAG_fit <- function(object, X, y, ...) {
-  backend <- if(is.sparse(object$X)) "R" else "C"
+  backend <- if(is.sparse(X)) "R" else "C"
   switch(object$input$model,
          binomial={
            .binomial_cost_grad(X=X, y=y, w=coef(object),
@@ -77,5 +77,5 @@ get_approx_grad.default <- function(object, ...) {
 }
 ##' @export 
 get_approx_grad.SAG_fit <- function(object, ...) {
-  object$d/NROW(object$g) + object$input$lambda * coef(object) 
+  object$d/NROW(object$g) ##+ object$input$lambda * coef(object) 
 }

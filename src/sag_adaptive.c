@@ -101,7 +101,7 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
   int k = 0; // TODO(Ishmael): Consider using the register keyword
   /* Monitoring */
   int pass_num = 0; // For weights monitoring
-  if ( monitor  && k % nSamples == 0 ) {
+  if (monitor  && k % nSamples == 0) {
     if (DEBUG) {
       R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
