@@ -1,7 +1,6 @@
 #include "sag_adaptive.h"
 
 const static int one = 1;
-const static int DEBUG = 1;
 
 void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
@@ -12,22 +11,45 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double *Li = dataset->Li;
   double *Lmax = dataset->Lmax;
   int increasing = dataset->increasing;
-
   /* Dimensions */
   int nVars = dataset->nVars;
   int nSamples = dataset->nSamples;
-
   /* Sampling */
-  double *randVals = dataset->randVals;
   int *covered = dataset->covered;
-  double *unCoveredMatrix = dataset->unCoveredMatrix;
-  double *LiMatrix = dataset->LiMatrix;
-  double *nDescendants = dataset->nDescendants;
   double *nCovered = &dataset->nCovered;
   double *Lmean = &dataset->Lmean;
-  int nLevels = dataset->nLevels;
-  int nextpow2 = dataset->nextpow2;
-
+  /* Do the O(n log n) initialization of the data structures
+     will allow sampling in O(log(n)) time */
+  int nextpow2 = pow(2, ceil(log2(nSamples)/log2(2)));
+  int nLevels = 1 + (int)ceil(log2(nSamples));
+  if (DEBUG) R_TRACE("next power of 2 is: %d\n",nextpow2);
+  if (DEBUG) R_TRACE("nLevels = %d\n",nLevels);
+  /* Counts number of descendents in tree */
+  double * nDescendants = Calloc(nextpow2 * nLevels, double);
+  /* Counts number of descenents that are still uncovered */
+  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
+  /* Sums Lipschitz constant of loss over descendants */
+  double * LiMatrix = Calloc(nextpow2 * nLevels, double);
+  for (int i = 0; i < nSamples; i++) {
+    nDescendants[i] = 1;
+    if (covered[i]) {
+        LiMatrix[i] = Li[i];
+    } else {
+      unCoveredMatrix[i] = 1;
+    }
+  }
+  int levelMax = nextpow2;
+  for (int level = 1; level < nLevels; level++) {
+    levelMax = levelMax/2;
+    for (int i = 0; i < levelMax; i++) {
+      nDescendants[i + nextpow2 * level] = nDescendants[ 2 * i + nextpow2 * (level - 1)] +
+                                           nDescendants[ 2 * i + 1 + nextpow2 * (level - 1)];
+      LiMatrix[i + nextpow2 * level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
+                                       LiMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
+      unCoveredMatrix[i + nextpow2 * level] = unCoveredMatrix[2 * i + nextpow2 * (level - 1)] +
+                                              unCoveredMatrix[2 * i + 1 + nextpow2 * (level - 1)];
+    }
+  }
   /* Training parameters */
   int maxIter = trainer->maxIter;
   double lambda = trainer->lambda;
@@ -49,9 +71,11 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
-    lastVisited = dataset->lastVisited;
-    cumSum = dataset->cumSum;
+    /* Allocate Memory Needed for lazy update */
+    cumSum = Calloc(maxIter, double);
+    lastVisited = Calloc(nVars, int);
   }
+
   /* Approximate gradients*/
   double *g = trainer->g;
   double *d = trainer->d;
@@ -60,21 +84,23 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double * monitor_w = trainer->monitor_w;
 
   /* Training */
-  _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples, randVals,
+  _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples,
                 covered, unCoveredMatrix, LiMatrix, nDescendants, nCovered,
                 Lmean, nLevels, nextpow2, maxIter, lambda, alpha, precision,
                 tol, loss_function, grad_fun, sparse, jc, ir, lastVisited,
                 cumSum, d, g, monitor, monitor_w);
-
-  Free(lastVisited);
-  Free(cumSum);
+  /* Deallocating */
+  if (sparse) {
+    Free(lastVisited);
+    Free(cumSum);
+  }
   Free(nDescendants);
   Free(unCoveredMatrix);
   Free(LiMatrix);
 }
 
 void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
-                   int increasing, int nVars, int nSamples, double *randVals,
+                   int increasing, int nVars, int nSamples,
                    int *covered, double *unCoveredMatrix, double *LiMatrix,
                    double *nDescendants, double *nCovered, double *Lmean,
                    int nLevels, int nextpow2, int maxIter, double lambda,
@@ -83,6 +109,7 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
                    int *jc, int *ir, int *lastVisited, double *cumSum,
                    double *d, double *g, int monitor, double * monitor_w) {
 
+  GetRNGstate();
   /* Training variables*/
   int i = 0, ind = 0;
   double offset = 0;
@@ -91,8 +118,7 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
   double fi = 0, fi_new = 0;
   double Li_old = 0;
   double gg = 0, wtx = 0, xtx = 0;
-  double u = 0, z = 0, Z = 0;
-
+  double u = 0, u_cond = 0, z = 0, Z = 0;
   double agrad_norm = 0;
 
   int stop_condition = 0;
@@ -110,8 +136,9 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     /* Select next training example */
     offset = 0;
     i = 0;
-    u = randVals[k + maxIter];
-    if (randVals[k] < (double)(nSamples - *nCovered) / (double)nSamples) {
+    u = runif(0, 1);
+    u_cond = runif(0, 1);
+    if (u_cond < (double)(nSamples - *nCovered) / (double)nSamples) {
       /* Sample fron uncovered guys */
       Z = unCoveredMatrix[nextpow2 * (nLevels - 1)];
       for (int level = nLevels - 1; level >= 0; level--) {
@@ -280,7 +307,7 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
-    agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
+    agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
     if ( monitor && k % nSamples == 0) {
@@ -303,4 +330,5 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
+  PutRNGstate();
 }

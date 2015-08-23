@@ -19,7 +19,7 @@ context("GLM -- GAUSSIAN")
 ######################
 ## Algorithms
 model <- "gaussian"
-algs <- list(constant="constant",
+algs <- list(##constant="constant",
              linesearch="linesearch",
              adaptive="adaptive")
 ## Data

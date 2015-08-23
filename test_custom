@@ -5,10 +5,10 @@ library(methods)
 #library(Matrix)
 load_all()
 ##gctorture(on=TRUE)
-demo("example_SAG2")
+#demo("example_SAG2")
 ## test_sparse_dset(dummy=TRUE)
-## data(rcv1_train)
-## lambda <- 1/NROW(rcv1_train$X)
+##data(rcv1_train)
+##lambda <- 1/NROW(rcv1_train$X)
 ## n <- NROW(rcv1_train$X)
 ## maxiter <- n 
 
@@ -18,3 +18,14 @@ demo("example_SAG2")
 ##                 maxiter=maxiter,
 ##                 fit_alg="constant",
 ##                 model="binomial")
+data(covtype.libsvm)
+X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
+y <- covtype.libsvm$y
+y[y == 2] <- -1
+p <- NCOL(X)
+n <- NROW(X)
+lambda <- 1/n
+maxiter <- n * 10
+family <- "binomial"
+sag_fit <- sag_fit(X, y, lambda=lambda, maxiter=maxiter, family=family, tol=0)
+print(get_cost(sag_fit, X, y))

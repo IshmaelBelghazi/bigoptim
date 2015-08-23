@@ -25,7 +25,6 @@ double _log_sum_exp(const double * restrict array, const int ar_size) {
   }
   return array_max + log(sum);
 }
-
 // TODO(Ishmael): Consider using R math functions
 /**
  * Log base 2
@@ -57,11 +56,5 @@ double get_cost_agrad_norm(double* w, double* d, double lambda,
   return sqrt(cost_grad_norm)/norm_const;
 }
 
-/* Counts Covered samples*/
-void count_covered_samples(Dataset* dataset) {
-  for (int i = 0; i < dataset->nSamples; i++) {
-    if (dataset->covered[i] != 0) dataset->nCovered++;
-  }
-}
 
 

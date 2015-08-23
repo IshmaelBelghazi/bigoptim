@@ -2,6 +2,40 @@
 
 const int one = 1;
 
+/*=============\
+| inititalizer |
+\=============*/
+
+GlmModel make_GlmModel(SEXP w, SEXP family) {
+
+  GlmModel model = {.w = REAL(w)};
+  GlmType model_type = *INTEGER(family);
+
+  /* Choosing family */
+  switch (model_type) {
+  case GAUSSIAN:
+    model.loss = gaussian_loss;
+    model.grad = gaussian_loss_grad;
+    break;
+  case BINOMIAL:
+    model.loss = binomial_loss;
+    model.grad = binomial_loss_grad;
+    break;
+  case EXPONENTIAL:
+    model.loss = exponential_loss;
+    model.grad = exponential_loss_grad;
+    break;
+  case POISSON:
+    model.loss = poisson_loss;
+    model.grad = poisson_loss_grad;
+    break;
+  default:
+    error("Unrecognized glm family");
+  }
+
+  return model;
+}
+
 /*=========\
 | GENERICS |
 \=========*/

@@ -1,12 +1,8 @@
 #include "sag_common.h"
 /* ENTRY POINTS -- START */
 #include "entrypoint-glm.h"
-#include "entrypoint-sag_constant.h"
-#include "entrypoint-sag_linesearch.h"
-#include "entrypoint-sag_adaptive.h"
-#include "entrypoint-sag_constant_warm.h"
-#include "entrypoint-sag_linesearch_warm.h"
-#include "entrypoint-sag_adaptive_warm.h"
+#include "entrypoint-sag.h"
+#include "entrypoint-sag_fit.h"
 /* ENTRY POINTS -- END */
 
 #include <R_ext/Rdynload.h>
@@ -27,13 +23,9 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
   /* SAG fit*/
-  CALLDEF(C_sag_constant, 13),
-  CALLDEF(C_sag_linesearch, 14),
-  CALLDEF(C_sag_adaptive, 15),
-  /* SAG fit with warmstarting*/
-  CALLDEF(C_sag_constant_warm, 12),
-  CALLDEF(C_sag_linesearch_warm, 13),
-  CALLDEF(C_sag_adaptive_warm, 14),
+  CALLDEF(C_sag_fit, 18),
+  /* SAG with warm-starting */
+  CALLDEF(C_sag, 17),
   {NULL, NULL, 0}
 };
 
@@ -45,28 +37,19 @@ void attribute_hidden bigoptim_R_cholmod_error(int status,
                                                const char *file,
                                                int line,
                                                const char *message) {
-  if(status < 0) {
+  if (status < 0) {
 #ifdef Failure_in_matching_Matrix
-    /* This fails unexpectedly with
-     *  function 'cholmod_l_defaults' not provided by package 'Matrix'
-     * from ../tests/lmer-1.R 's  (l.68)  lmer(y ~ habitat + (1|habitat*lagoon)
-     */
-    M_cholmod_defaults(&c);/* <--- restore defaults,
-                            * as we will not be able to .. */
-    c.final_ll = 1;	    /* LL' form of simplicial factorization */
+    M_cholmod_defaults(&c);
+    c.final_ll = 1;
 #endif
 
     error("Cholmod error '%s' at file:%s, line %d", message, file, line);
-  }
-  else
+  } else {
     warning("Cholmod warning '%s' at file:%s, line %d",
             message, file, line);
+  }
 }
-/** Initializer for cplm, called upon loading the package.
- *
- *  Initialize CHOLMOD and require the LL' form of the factorization.
- *  Install the symbols to be u sed by functions in the package.
- */
+
 #ifdef HAVE_VISIBILITY_ATTRIBUTE
 __attribute__ ((visibility ("default")))
 #endif

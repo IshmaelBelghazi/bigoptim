@@ -4,11 +4,11 @@
 \alias{sag_fit}
 \title{Stochastic Average Gradient Fit}
 \usage{
-sag_fit(X, y, lambda = 0, maxiter = NULL, w = NULL, stepSize = NULL,
+sag_fit(X, y, lambda = 0, maxiter = NULL, w = NULL, alpha = NULL,
   stepSizeType = 1, Li = NULL, Lmax = NULL, increasing = TRUE,
-  iVals = NULL, d = NULL, g = NULL, covered = NULL,
-  standardize = FALSE, randVals = NULL, tol = 0.001, model = "binomial",
-  fit_alg = "constant", monitor = FALSE, ...)
+  d = NULL, g = NULL, covered = NULL, standardize = FALSE,
+  tol = 0.001, family = "binomial", fit_alg = "constant",
+  monitor = FALSE, ...)
 }
 \value{
 object of class SAG_fit

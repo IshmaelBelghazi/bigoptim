@@ -124,8 +124,8 @@ SEXP C_poisson_cost_grad(SEXP Xt, SEXP y, SEXP w, SEXP lambda) {
   SEXP grad = PROTECT(allocMatrix(REALSXP, nVars, 1)); nprot++;
   memset(REAL(grad), 0.0, nVars * sizeof(double));
   poisson_cost_grad(REAL(Xt), REAL(y), REAL(w), *REAL(lambda),
-                     nSamples, nVars,
-                     REAL(grad));
+                    nSamples, nVars,
+                    REAL(grad));
 
   UNPROTECT(nprot);
   return grad;

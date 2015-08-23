@@ -1,9 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 #include "sag_common.h"
-#include "trainers.h"
-#include "glm_models.h"
-#include "dataset.h"
 
 /* Macros */
 /* DEBUG MACROS*/
@@ -39,5 +36,4 @@ double _log_sum_exp(const double * restrict array, const int ar_size);
 double log2(double x);
 double get_cost_agrad_norm(double * w, double * d, double lambda,
                            double nCovered, int nSamples, int nVars);
-void count_covered_samples(Dataset* dataset);
 #endif /* UTILS_H */

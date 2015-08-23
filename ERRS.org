@@ -1,21 +1,19 @@
 * Address Sanitizer
-** TODO   utils.c:53:30: runtime error: division by zero
+** DONE utils.c:53:30: runtime error: division by zero
 > sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
 +                             family=family, tol=tol, model="binomial",
 +                             fit_alg="constant", standardize=FALSE)
 Sutils.c:53:30: runtime error: division by zero
 SUMMARY: AddressSanitizer: undefined-behavior utils.c:53 
-** TODO arithmetic.c:1012:3: runtime error: division by zero
+** DONE arithmetic.c:1012:3: runtime error: division by zero
 > sag_adaptive_fit <- sag_fit(X, y, lambda=lambda, maxiter=10, randVals=randVals,
 +                             tol=tol, model="binomial", fit_alg="adaptive")
 arithmetic.c:1012:3: runtime error: division by zero
 SUMMARY: AddressSanitizer: undefined-behavior arithmetic.c:1012
-** TODO sag_step.c:307:37: runtime error: division by zero
+** DONE sag_step.c:307:37: runtime error: division by zero
 sag_step.c:307:37: runtime error: division by zero
 SUMMARY: AddressSanitizer: undefined-behavior sag_step.c:307
-** TODO  sag_step.c:334:21: runtime error: division by zero
+** DONE sag_step.c:334:21: runtime error: division by zero
 sag_step.c:334:21: runtime error: division by zero
 SUMMARY: AddressSanitizer: undefined-behavior sag_step.c:334 
 
-* Memory Check Valgrind
-** 

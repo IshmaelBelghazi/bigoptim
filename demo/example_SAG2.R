@@ -17,7 +17,7 @@ tol <- 0
 ## SAG with Constant step size
 print("Running Stochastic Average Gradient with constant step size")
 sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
-                            tol=tol, model="binomial",
+                            tol=tol, family="binomial",
                             fit_alg="constant", standardize=FALSE)
 cost_constant <- get_cost(sag_constant_fit, X, y)
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513607",
@@ -30,11 +30,11 @@ print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
 ## -----------------------------------------------------------------------------
 ## SAG with linesearch
 print("Running Stochastic Average Gradient with line-search")
-Lmax <- 1
+Li <- 1
 sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
-                      stepSize=Lmax, stepSizeType=1,
-                      maxiter=maxiter, family=family,
-                      tol=tol, model="binomial", fit_alg="linesearch",
+                      Li=Li, stepSizeType=1,
+                      maxiter=maxiter, 
+                      tol=tol, family="binomial", fit_alg="linesearch",
                       standardize=FALSE)
 cost_ls <- get_cost(sag_ls_fit, X=X, y=y) 
 print(sprintf("Cost is: %f. Value in Mark's matlab code: 0.513497",
@@ -48,10 +48,9 @@ print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
 ## SAG with linesearch and adaptive sampling
 print(paste0("Running Stochastic Average Gradient with ",
              "linesearch and adaptive sampling"))
-randVals <- matrix(runif(maxiter * 2), nrow=maxiter, ncol=2)
 sag_adaptive_fit <- sag_fit(X, y, lambda=lambda,
-                            maxiter=maxiter, randVals=randVals,
-                            tol=tol, model="binomial", fit_alg="adaptive",
+                            maxiter=maxiter, 
+                            tol=tol, family="binomial", fit_alg="adaptive",
                             standardize=FALSE)
 
 cost_adaptive <- get_cost(sag_adaptive_fit, X=X, y=y) 

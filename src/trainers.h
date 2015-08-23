@@ -1,10 +1,9 @@
 #ifndef TRAINER_H_
 #define TRAINER_H_
-
+#include "sag_common.h"
 /*============\
 | GLM trainer |
 \============*/
-
 /* Trainer structs */
 typedef struct GlmTrainer {
   double lambda;  // scalar regularization parameter
@@ -18,13 +17,12 @@ typedef struct GlmTrainer {
   double precision;
   double tol;  // Tolerance
 
+  SAG_TYPE fit_alg;  // SAG fit algorithm
   int monitor;  // Monitor training after every pass
   double * monitor_w;  // Monitoring weigthts
 } GlmTrainer;
 
-/* trainer type enum */
-typedef enum {CONSTANT, LINESEARCH, ADAPTIVE} SAG_TYPE;
-
-
+GlmTrainer make_GlmTrainer(SEXP lambda, SEXP alpha, SEXP d, SEXP g, SEXP maxIter,
+                           SEXP stepSizeType, SEXP tol, SEXP fit_alg, SEXP monitor);
 #endif /* TRAINER_H_ */
 

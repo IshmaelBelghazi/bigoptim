@@ -1,60 +1,49 @@
 #include "sag_constant.h"
 
 const static int one = 1;
-const static int DEBUG = 1;
-void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
+void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   /* Unpacking Structs */
   /* Dataset */
-  double * y = dataset->y;
-  double * Xt = dataset->Xt;
-
+  double *y = dataset->y;
+  double *Xt = dataset->Xt;
   /* Dimensions */
   int nVars = dataset->nVars;
   int nSamples = dataset->nSamples;
-
   /* Sampling */
-  int * iVals = dataset->iVals;
-  int * covered = dataset->covered;
-  double * nCovered = &dataset->nCovered;
+  int *covered = dataset->covered;
+  double *nCovered = &dataset->nCovered;
   /* Training parameters */
   int maxIter = trainer->maxIter;
   double lambda = trainer->lambda;
   double alpha = trainer->alpha;
   double tol = trainer->tol;
   /* Model */
-  double * w = model->w;
+  double *w = model->w;
   loss_grad_fun grad_fun = model->grad;
-
   /* Sparse related variables */
   int sparse = dataset->sparse;
-  int * jc = NULL, * ir = NULL;
-  int * lastVisited = NULL;
-  double * cumSum = NULL;
+  int *jc = NULL, *ir = NULL;
+  int *lastVisited = NULL;
+  double *cumSum = NULL;
   if (sparse) {
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
-    lastVisited = dataset->lastVisited;
-    cumSum = dataset->cumSum;
+    /* Allocate Memory Needed for lazy update */
+    cumSum = Calloc(maxIter, double);
+    lastVisited = Calloc(nVars, int);
   }
-
   /* Approximate gradients*/
-  double * g = trainer->g;
-  double * d = trainer->d;
-
+  double *g = trainer->g;
+  double *d = trainer->d;
   /* Monitoring */
   int monitor = trainer->monitor;
-  double * monitor_w = trainer->monitor_w;
-
+  double *monitor_w = trainer->monitor_w;
   /* Training */
-  _sag_constant(w, Xt, y, lambda, alpha,
-                d, g, grad_fun,
-                iVals, covered, nCovered,
-                nSamples, nVars, sparse, jc, ir,
-                lastVisited, cumSum, tol, maxIter,
-                monitor, monitor_w);
-
+  _sag_constant(w, Xt, y, lambda, alpha, d, g, grad_fun, covered, nCovered,
+                nSamples, nVars, sparse, jc, ir, lastVisited, cumSum, tol,
+                maxIter, monitor, monitor_w);
   /* Deallocating */
   if (sparse) {
     Free(lastVisited);
@@ -62,13 +51,14 @@ void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset) {
   }
 }
 
-void _sag_constant(double * w, double * Xt, double * y, double lambda, double alpha,
-                   double * d, double * g, loss_grad_fun grad_fun,
-                   int * iVals, int * covered, double * nCovered,
-                   int nSamples, int nVars, int sparse, int * jc, int * ir,
-                   int * lastVisited, double * cumSum, double tol, int maxIter,
-                   int monitor, double * monitor_w) {
+void _sag_constant(double *w, double *Xt, double *y, double lambda,
+                   double alpha, double *d, double *g, loss_grad_fun grad_fun,
+                   int *covered, double *nCovered, int nSamples, int nVars,
+                   int sparse, int *jc, int *ir, int *lastVisited,
+                   double *cumSum, double tol, int maxIter, int monitor,
+                   double *monitor_w) {
 
+  GetRNGstate();
   /* Training variables*/
   int i = 0;
   double c = 1.0;
@@ -78,10 +68,10 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
 
   int stop_condition = 0;
   /* Training Loop */
-  int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  int k = 0; // TODO(Ishmael): Consider using the register keyword
   // Monitoring
   int pass_num = 0; // For weights monitoring
-  if ( monitor  && k % nSamples == 0 ) {
+  if (monitor && k % nSamples == 0) {
     if (DEBUG) {
       R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
@@ -89,7 +79,7 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
   }
   while (!stop_condition) {
     /* Select next training example */
-    i = iVals[k] - 1;
+    i = (int)floor(runif(0, 1) * nSamples);
     /* Compute current values of needed parameters */
     if (sparse && k > 0) {
       for (int j = jc[i]; j < jc[i + 1]; j++) {
@@ -107,7 +97,7 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
     if (sparse) {
       innerProd = 0;
       for (int j = jc[i]; j < jc[i + 1]; j++) {
-        //R_TRACE("jc[%d]=%f, jc[%d]=%f",i, jc[i], i + 1, jc[i + 1]);
+        // R_TRACE("jc[%d]=%f, jc[%d]=%f",i, jc[i], i + 1, jc[i + 1]);
         innerProd += w[ir[j]] * Xt[j];
       }
       innerProd *= c;
@@ -150,23 +140,23 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
       F77_CALL(daxpy)(&nVars, &scaling, d, &one, w, &one);
     }
 
-/* if (k % nSamples == 0 && DEBUG) { */
-/*     R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
-/*       } */
-  /* Incrementing iteration count */
-  k++;
-  /* Checking Stopping criterions */
-  agrad_norm = F77_CALL(dnrm2)(&nVars, w, &one) * 1/ *nCovered;
-  stop_condition = (k >= maxIter) || (agrad_norm <= tol);
-  /* Monitoring */
-  if ( monitor && k % nSamples == 0) {
-    pass_num++;
-    if (DEBUG) {
-      R_TRACE("effective pass # %d. saving weights.", pass_num);
+    /* if (k % nSamples == 0 && DEBUG) { */
+    /*     R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w,
+     * lambda, nSamples, nVars)); */
+    /*       } */
+    /* Incrementing iteration count */
+    k++;
+    /* Checking Stopping criterions */
+    agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+    stop_condition = (k >= maxIter) || (agrad_norm <= tol);
+    /* Monitoring */
+    if (monitor && k % nSamples == 0) {
+      pass_num++;
+      if (DEBUG) {
+        R_TRACE("effective pass # %d. saving weights.", pass_num);
+      }
+      F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
-    F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
-  }
-
   }
 
   if (sparse) {
@@ -180,4 +170,5 @@ void _sag_constant(double * w, double * Xt, double * y, double lambda, double al
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
+  PutRNGstate();
 }

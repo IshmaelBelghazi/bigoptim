@@ -19,6 +19,9 @@ typedef enum {GAUSSIAN,
               POISSON
 } GlmType;
 
+/* Initializer */
+GlmModel make_GlmModel(SEXP w, SEXP family);
+
 /* Gaussian */
 double gaussian_loss(double y, double innerProd);
 double gaussian_loss_grad(double y, double innerProd);
