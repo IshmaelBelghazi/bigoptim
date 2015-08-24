@@ -31,7 +31,7 @@
         X[, 1] <- 1
     }
     z <- X %*% true_params
-    pr <- pmax(-1/z, .Machine$double.eps)
+    pr <- pmax(-1/z, 0.1)
     y <- rexp(sample_size, pr)
     y <- matrix(y, ncol=1)
     return(list(X=X, y=y, true_params=true_params))

@@ -27,7 +27,7 @@ sample_size <- NROW(dataset$X)
 ## Test parmeters
 eps <- 1e-02
 ## Training parameters
-tol <- 1e-04  ## Stop training when norm of approximate gradient is smaller than tol
+tol <- 0  ## Stop training when norm of approximate gradient is smaller than tol
 maxiter <- sample_size * 20
 lambda <- 1/sample_size
 ## A. Empirical Data tests

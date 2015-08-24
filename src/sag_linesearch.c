@@ -51,41 +51,46 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   /* Monitoring */
   int monitor = trainer->monitor;
-  double * monitor_w = trainer->monitor_w;
+  double *monitor_w = trainer->monitor_w;
   /* Convergence diagnostic */
-  int * iter_count = &trainer->iter_count;
-  int * convergence_code = &trainer->convergence_code;
+  int *iter_count = &trainer->iter_count;
+  int *convergence_code = &trainer->convergence_code;
 
   /* Training */
-  _sag_linesearch(w, Xt, y, lambda,
-                  alpha, stepSizeType, precision, Li,
-                  d, g, loss_function, grad_function,
-                  covered, nCovered, nVars, nSamples,
-                  sparse, ir, jc, lastVisited,
-                  cumSum, maxIter, tol, monitor, monitor_w,
-                  iter_count, convergence_code);
-
+  _sag_linesearch(w, Xt, y, lambda, alpha, stepSizeType, precision, Li, d, g,
+                  loss_function, grad_function, covered, nCovered, nVars,
+                  nSamples, sparse, ir, jc, lastVisited, cumSum, maxIter, tol,
+                  monitor, monitor_w, iter_count, convergence_code);
 
   /* Deallocating */
   if (sparse) {
-  Free(lastVisited);
-  Free(cumSum);
+    Free(lastVisited);
+    Free(cumSum);
   }
 }
 
-  void _sag_linesearch(double * w, double * Xt, double * y, double lambda,
-                       double alpha, int stepSizeType, double precision, double * Li,
-                       double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
-                       int * covered, double * nCovered, int nVars, int nSamples,
-                       int sparse, int * ir, int * jc, int * lastVisited,
-                       double * cumSum, int maxIter, double tol, int monitor, double * monitor_w,
-                       int * iter_count, int * convergence_code) {
 
-    GetRNGstate();
+void _sag_linesearch(double *restrict w, const double *restrict Xt,
+                     const double *restrict y, const double lambda,
+                     double alpha, const int stepSizeType,
+                     const double precision, double *restrict Li,
+                     double *restrict d, double *restrict g,
+                     loss_fun loss_function, loss_grad_fun grad_function,
+                     int *restrict covered, double *restrict nCovered,
+                     const int nVars, const int nSamples, const int sparse,
+                     const int *restrict ir, const int *restrict jc,
+                     int *restrict lastVisited, double *restrict cumSum,
+                     const int maxIter, const double tol, const int monitor,
+                     double *restrict monitor_w, int *restrict iter_count,
+                     int *restrict convergence_code) {
+
+  GetRNGstate();
   /* Training variables*/
-  int i = 0;
+  register int i = 0;
   double c = 1.0;
-  double scaling = 0, innerProd = 0, grad = 0;
+  double scaling = 0;
+  double innerProd = 0;
+  double grad = 0;
   double fi = 0, fi_new = 0;
   double gg = 0, wtx = 0, xtx = 0;
 
@@ -93,16 +98,17 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
 
   int stop_condition = 0;
   /* Training Loop */
-  int k = 0;  // TODO(Ishmael): Consider using the register keyword
+  register int k = 0; // TODO(Ishmael): Consider using the register keyword
   /* Monitoring */
   int pass_num = 0; // For weights monitoring
-  if ( monitor  && k % nSamples == 0 ) {
+  if (monitor && k % nSamples == 0) {
     if (DEBUG) {
-      if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
+      if (DEBUG)
+        R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
     F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
   }
-  while (!stop_condition){
+  while (!stop_condition) {
     /* Select next training example */
     i = (int)floor(runif(0, 1) * nSamples);
 
@@ -201,26 +207,29 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     *Li *= pow(2.0, -1.0 / nSamples);
 
     /* if (k % nSamples == 0 && DEBUG) { */
-    /*   if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
+    /*   if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y,
+     * w, lambda, nSamples, nVars)); */
     /* } */
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
     if (!sparse) {
-    agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+      if (tol > 0) agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
     }
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
-    if ( monitor && k % nSamples == 0) {
+    if (monitor && k % nSamples == 0) {
       pass_num++;
       if (DEBUG) {
-        if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
+        if (DEBUG)
+          R_TRACE("effective pass # %d. saving weights.", pass_num);
       }
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
   }
   PutRNGstate();
-  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  if (DEBUG)
+    R_TRACE("Final approxite gradient norm: %F", agrad_norm);
   /* Setting final iteration count */
   *iter_count = k;
   /* Checking Convergence condition */
@@ -228,7 +237,9 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     *convergence_code = 1;
   } else {
     *convergence_code = 0;
-    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+    if (tol > 0)
+      warning("Optimisation stopped before convergence. Try incrasing maximum "
+              "number of iterations");
   }
   if (sparse) {
     for (int j = 0; j < nVars; j++) {

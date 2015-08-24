@@ -36,9 +36,10 @@ double _log_sum_exp(const double * restrict array, const int ar_size) {
 double log2(double x) {
   return log(x)/log(2);
 }
+
 /* computes cost function's approximate gradient norm */
-double get_cost_agrad_norm(double* w, double* d, double lambda,
-                          double nCovered, int nSamples, int nVars) {
+double get_cost_agrad_norm(const double* restrict w, const double* restrict d, const double lambda,
+                          const double nCovered, const int nSamples, const int nVars) {
   /* Normalize approximete gradient by the min of seen example and sample Size.
      This is done to avoid having an artificially small normalized approximate gradient
      when it is initialized at zero */

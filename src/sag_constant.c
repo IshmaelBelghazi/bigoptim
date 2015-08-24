@@ -56,24 +56,24 @@ void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   }
 }
 
-void _sag_constant(double *w, double *Xt, double *y, double lambda,
-                   double alpha, double *d, double *g, loss_grad_fun grad_fun,
-                   int *covered, double *nCovered, int nSamples, int nVars,
-                   int sparse, int *jc, int *ir, int *lastVisited,
-                   double *cumSum, double tol, int maxIter, int monitor,
-                   double *monitor_w, int * iter_count, int * convergence_code) {
+void _sag_constant(double * restrict w, const double * restrict Xt, const double *y, const double lambda,
+                   const double alpha, double * restrict d, double *restrict g, const loss_grad_fun grad_fun,
+                   int * restrict covered, double * restrict nCovered, const int nSamples, const int nVars,
+                   const int sparse, const int * restrict jc, const int * restrict ir, int *restrict lastVisited,
+                   double * restrict cumSum, const double tol, const int maxIter, const int monitor,
+                   double * restrict monitor_w, int * restrict iter_count, int * restrict convergence_code) {
 
   GetRNGstate();
   /* Training variables*/
-  int i = 0;
+  register int i = 0;
   double c = 1.0;
-  double scaling = 0, innerProd = 0, grad = 0;
-
+  double scaling = 0;
+  double  innerProd = 0;
+  double grad = 0;
   double agrad_norm = R_PosInf;
-
   int stop_condition = 0;
   /* Training Loop */
-  int k = 0; // TODO(Ishmael): Consider using the register keyword
+  register int k = 0; // TODO(Ishmael): Consider using the register keyword
   // Monitoring
   int pass_num = 0; // For weights monitoring
   if (monitor && k % nSamples == 0) {
@@ -153,7 +153,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     k++;
     /* Checking Stopping criterions */
     if (!sparse) {
-      agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+      if (tol > 0) agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
     }
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
@@ -174,7 +174,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     *convergence_code = 1;
   } else {
     *convergence_code = 0;
-    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+    if (tol > 0) warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
   }
 
   if (sparse) {

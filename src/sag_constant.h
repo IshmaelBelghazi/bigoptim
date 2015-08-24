@@ -5,13 +5,16 @@
 #include "trainers.h"
 #include "glm_models.h"
 /* Interface */
-void sag_constant(GlmTrainer * trainer, GlmModel * model, Dataset * dataset);
+void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset);
 /* Core */
-void _sag_constant(double * w, double * Xt, double * y, double lambda,
-                   double alpha, double * d, double * g, loss_grad_fun grad_fun,
-                   int * covered, double * nCovered, int nSamples, int nVars,
-                   int sparse, int * jc, int * ir,
-                   int * lastVisited, double * cumSum, double tol, int maxIter,
-                   int monitor, double * monitor_w, int * iter_count,
-                   int * convergence_code);
+void _sag_constant(double *restrict w, const double *restrict Xt,
+                   const double *y, const double lambda, const double alpha,
+                   double *restrict d, double *restrict g,
+                   const loss_grad_fun grad_fun, int *restrict covered,
+                   double *restrict nCovered, const int nSamples,
+                   const int nVars, const int sparse, const int *restrict jc,
+                   const int *restrict ir, int *restrict lastVisited,
+                   double *restrict cumSum, const double tol, const int maxIter,
+                   const int monitor, double *restrict monitor_w,
+                   int *restrict iter_count, int *restrict convergence_code);
 #endif /* SAG_CONSTANT_H_ */

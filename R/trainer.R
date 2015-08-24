@@ -38,9 +38,9 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
   ##,------------------------------
   ##| Initializing common variables
   ##`------------------------------
-  ## Initializing maximum iterations
   if (is.null(maxiter)) {
-    maxiter <- NROW(X) * 10
+    if (monitor) stop("monitoring not allowed with unbounded maximum iterations")
+    maxiter <- .Machine$integer.max
   }
   ## Initializing weights
   if (is.null(w)) {
@@ -106,9 +106,13 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
 
   sag_fit <- .Call("C_sag_fit", w, Matrix::t(X), y, lambda,
                    alpha, as.integer(stepSizeType), Li, Lmax,
-                   increasing, d, g, covered, tol, as.integer(maxiter),
-                   as.integer(family_id), as.integer(fit_alg_id),
-                   as.integer(sparse), as.integer(monitor))
+                   as.integer(increasing),
+                   d, g, covered, tol,
+                   as.integer(maxiter),
+                   as.integer(family_id),
+                   as.integer(fit_alg_id),
+                   as.integer(sparse),
+                   as.integer(monitor))
 
   ##,---------------------------
   ##| Structuring SAG_fit object
@@ -158,9 +162,8 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
   ##,------------------------------
   ##| Initializing common variables
   ##`------------------------------
-  ## Initializing maximum iterations
   if (is.null(maxiter)) {
-    maxiter <- NROW(X) * 10
+    maxiter <- .Machine$integer.max
   }
   ## Initializing weights
   if (is.null(w)) {
@@ -226,8 +229,10 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
 
   sag_fits <- .Call("C_sag", w, Matrix::t(X), y, lambdas,
                     alpha, as.integer(stepSizeType), Li, Lmax,
-                    increasing, d, g, covered, tol, as.integer(maxiter),
-                    as.integer(family_id), as.integer(fit_alg_id),
+                    increasing, d, g, covered, tol,
+                    as.integer(maxiter),
+                    as.integer(family_id),
+                    as.integer(fit_alg_id),
                     as.integer(sparse))
 
   ##,---------------------------

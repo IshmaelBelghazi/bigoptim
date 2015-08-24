@@ -8,50 +8,65 @@ typedef double (*loss_grad_fun)(double, double);
 
 /* Model struct */
 typedef struct {
-  double * w; // Weights (p, 1)
+  double *w; // Weights (p, 1)
   loss_fun loss;
   loss_grad_fun grad;
 } GlmModel;
 
-typedef enum {GAUSSIAN,
-              BINOMIAL,
-              EXPONENTIAL,
-              POISSON
-} GlmType;
+typedef enum { GAUSSIAN, BINOMIAL, EXPONENTIAL, POISSON } GlmType;
 
 /* Initializer */
 GlmModel make_GlmModel(SEXP w, SEXP family);
-
+/* Generics */
+double glm_cost(const double *restrict Xt, const double *restrict y,
+                const double *restrict w, const double lambda,
+                const int nSamples, const int nVars, const loss_fun glm_loss);
+void glm_cost_grad(const double *restrict Xt, const double *restrict y,
+                   const double *restrict w, const double lambda,
+                   const int nSamples, const int nVars,
+                   const loss_grad_fun glm_grad, double *restrict grad);
 /* Gaussian */
-double gaussian_loss(double y, double innerProd);
-double gaussian_loss_grad(double y, double innerProd);
-double gaussian_cost(double * Xt, double * y, double * w,
-                     double lambda, int nSamples, int nVars);
-void gaussian_cost_grad(double * Xt, double * y, double * w, double lambda,
-                        const int nSamples, const int nVars, double * grad);
+double gaussian_loss(const double y, const double innerProd);
+double gaussian_loss_grad(const double y, const double innerProd);
+double gaussian_cost(const double *restrict Xt, const double *restrict y,
+                     const double *restrict w, const double lambda,
+                     const int nSamples, const int nVars);
+void gaussian_cost_grad(const double *restrict Xt, const double *restrict y,
+                        const double *restrict w, const double lambda,
+                        const int nSamples, const int nVars,
+                        double *restrict grad);
 
 /* Binomial */
-double binomial_loss(double y, double innerProd);
-double binomial_loss_grad(double y, double innerProd);
-double binomial_cost(double * Xt, double * y, double * w,
-                      double lambda, int nSamples, int nVars);
-void binomial_cost_grad(double * Xt, double * y, double * w, double lambda,
-                         const int nSamples, const int nVars, double * grad);
+double binomial_loss(const double y, const double innerProd);
+double binomial_loss_grad(const double y, const double innerProd);
+double binomial_cost(const double *restrict Xt, const double *restrict y,
+                     const double *restrict w, const double lambda,
+                     const int nSamples, const int nVars);
+void binomial_cost_grad(const double *restrict Xt, const double *restrict y,
+                        const double *restrict w, const double lambda,
+                        const int nSamples, const int nVars,
+                        double *restrict grad);
 
 /*  Exponential */
-double exponential_loss(double y, double innerProd);
-double exponential_loss_grad(double y, double innerProd);
-double exponential_cost(double * Xt, double * y, double * w,
-                     double lambda, int nSamples, int nVars);
-void exponential_cost_grad(double * Xt, double * y, double * w, double lambda,
-                        const int nSamples, const int nVars, double * grad);
+double exponential_loss(const double y, const double innerProd);
+double exponential_loss_grad(const double y, const double innerProd);
+double exponential_cost(const double *restrict Xt, const double *restrict y,
+                        const double *restrict w, const double lambda,
+                        const int nSamples, const int nVars);
+void exponential_cost_grad(const double *restrict Xt, const double *restrict y,
+                           const double *restrict w, const double lambda,
+                           const int nSamples, const int nVars,
+                           double *restrict grad);
 
 /* Poisson */
-double poisson_loss(double y, double innerProd);
-double poisson_loss_grad(double y, double innerProd);
-double poisson_cost(double * Xt, double * y, double * w,
-                     double lambda, int nSamples, int nVars);
-void poisson_cost_grad(double * Xt, double * y, double * w, double lambda,
-                        const int nSamples, const int nVars, double * grad);
+double poisson_loss(const double y, const double innerProd);
+double poisson_loss_grad(const double y, const double innerProd);
+double poisson_cost(const double *restrict Xt, const double *restrict y,
+                    const double *restrict w, const double lambda,
+                    const int nSamples, const int nVars);
+void poisson_cost_grad(const double *restrict Xt, const double *restrict y,
+                       const double *restrict w, const double lambda,
+                       const int nSamples, const int nVars,
+                       double *restrict grad);
 
 #endif /* GLM_MODELS_H_ */
