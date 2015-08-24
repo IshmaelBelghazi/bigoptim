@@ -30,7 +30,7 @@ sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
                       tol=1e-08, family="binomial", fit_alg="linesearch",
                       standardize=FALSE)
 ## Getting weights
-weighs <- coef(sag_ls_fit)
+weights <- coef(sag_ls_fit)
 ## Getting cost
 cost <- get_cost(sag_ls_fit)
 #+END_SRC
