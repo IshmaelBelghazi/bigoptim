@@ -93,7 +93,7 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   int pass_num = 0; // For weights monitoring
   if ( monitor  && k % nSamples == 0 ) {
     if (DEBUG) {
-      R_TRACE("effective pass # %d. saving weights.", pass_num);
+      if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
     F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
   }
@@ -196,7 +196,7 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     *Li *= pow(2.0, -1.0 / nSamples);
 
     /* if (k % nSamples == 0 && DEBUG) { */
-    /*   R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
+    /*   if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars)); */
     /* } */
     /* Incrementing iteration count */
     k++;
@@ -209,7 +209,7 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     if ( monitor && k % nSamples == 0) {
       pass_num++;
       if (DEBUG) {
-        R_TRACE("effective pass # %d. saving weights.", pass_num);
+        if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
       }
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
@@ -227,5 +227,5 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
   PutRNGstate();
-  R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

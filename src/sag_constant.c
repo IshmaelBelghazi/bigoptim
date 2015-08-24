@@ -27,12 +27,12 @@ void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   int *lastVisited = NULL;
   double *cumSum = NULL;
   if (sparse) {
-    R_TRACE("Populating sparse pointers");
+    if (DEBUG) R_TRACE("Populating sparse pointers");
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
     /* Allocate Memory Needed for lazy update */
-    R_TRACE("Allocating sparse variables");
+    if (DEBUG) R_TRACE("Allocating sparse variables");
     cumSum = Calloc(maxIter, double);
     lastVisited = Calloc(nVars, int);
   }
@@ -75,7 +75,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
   int pass_num = 0; // For weights monitoring
   if (monitor && k % nSamples == 0) {
     if (DEBUG) {
-      R_TRACE("effective pass # %d. saving weights.", pass_num);
+      if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
     F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
   }
@@ -99,7 +99,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     if (sparse) {
       innerProd = 0;
       for (int j = jc[i]; j < jc[i + 1]; j++) {
-        // R_TRACE("jc[%d]=%f, jc[%d]=%f",i, jc[i], i + 1, jc[i + 1]);
+        // if (DEBUG) R_TRACE("jc[%d]=%f, jc[%d]=%f",i, jc[i], i + 1, jc[i + 1]);
         innerProd += w[ir[j]] * Xt[j];
       }
       innerProd *= c;
@@ -143,7 +143,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     }
 
     /* if (k % nSamples == 0 && DEBUG) { */
-    /*     R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w,
+    /*     if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w,
      * lambda, nSamples, nVars)); */
     /*       } */
     /* Incrementing iteration count */
@@ -157,7 +157,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     if (monitor && k % nSamples == 0) {
       pass_num++;
       if (DEBUG) {
-        R_TRACE("effective pass # %d. saving weights.", pass_num);
+        if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
       }
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
@@ -175,5 +175,5 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
   PutRNGstate();
-  R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

@@ -14,7 +14,7 @@
 
 /* DEBUG */
 #ifndef DEBUG
-#define DEBUG 1
+#define DEBUG 0  // Enable/diasble traces.
 #endif
 /* Constant */
 const static double precision = 1.490116119384765625e-8;

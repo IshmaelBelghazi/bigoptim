@@ -29,9 +29,9 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   /*===============\
   | Error Checking |
   \===============*/
-  R_TRACE("validating inputs");
+  if (DEBUG) R_TRACE("validating inputs");
   validate_inputs(wInit, Xt, y, dInit, gInit, coveredInit, sparse);
-  R_TRACE("inputs validated");
+  if (DEBUG) R_TRACE("inputs validated");
   /* Initializing protection counter */
   int nprot = 0;
   /* Duplicating objects to be modified */
@@ -46,16 +46,16 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   | Input |
   \======*/
   /* Initializing dataset */
-  R_TRACE("Initializing dataset");
+  if (DEBUG) R_TRACE("Initializing dataset");
   Dataset train_set = make_Dataset(Xt, y, covered, Lmax, Li, increasing, fit_alg, sparse);
-  R_TRACE("Dataset initialized");
+  if (DEBUG) R_TRACE("Dataset initialized");
   /* Initializing Trainer */
-  R_TRACE("Initializing Trainer");
+  if (DEBUG) R_TRACE("Initializing Trainer");
   GlmTrainer trainer = make_GlmTrainer(lambda, alpha, d, g, maxiter,
                                        stepSizeType, tol, fit_alg, monitor);
-  R_TRACE("Trainer initialized");
+  if (DEBUG) R_TRACE("Trainer initialized");
   /* Monitoring weights */
-  R_TRACE("Setting up monitor");
+  if (DEBUG) R_TRACE("Setting up monitor");
   int n_passes = trainer.maxIter / train_set.nSamples;
   SEXP monitor_w;
   if (trainer.monitor) {
@@ -65,23 +65,23 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   } else {
     monitor_w = R_NilValue;
   }
-  R_TRACE("Monitor set");
+  if (DEBUG) R_TRACE("Monitor set");
   /* Initializing Model */
-  R_TRACE("Initializing model");
+  if (DEBUG) R_TRACE("Initializing model");
   GlmModel model = make_GlmModel(w, family);
-  R_TRACE("Model initialized");
+  if (DEBUG) R_TRACE("Model initialized");
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
   /* Counting previously covered example for manual warm starting */
   /* Training */
-  R_TRACE("Training ...");
+  if (DEBUG) R_TRACE("Training ...");
   train(&trainer, &model, &train_set);
-  R_TRACE("... Training finished");
+  if (DEBUG) R_TRACE("... Training finished");
   /*=======\
   | Return |
   \=======*/
-  R_TRACE("Setting up return S-EXP");
+  if (DEBUG) R_TRACE("Setting up return S-EXP");
   SEXP convergence_code = PROTECT(allocVector(INTSXP, 1)); nprot++;
   *INTEGER(convergence_code) = -1;
   SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
@@ -94,7 +94,7 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g",
                 "covered", "Li", "convergence_code", "iter_count", "monitor_w");
   setAttrib(results, R_NamesSymbol, results_names);
-  R_TRACE("Return S-EXP all set up");
+  if (DEBUG) R_TRACE("Return S-EXP all set up");
   /* ---------------------------------------------------------------------------*/
   UNPROTECT(nprot);
   return results;

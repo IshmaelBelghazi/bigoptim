@@ -5,7 +5,7 @@ GlmTrainer make_GlmTrainer(SEXP lambda, SEXP alpha, SEXP d, SEXP g, SEXP maxIter
                            SEXP stepSizeType, SEXP tol, SEXP fit_alg, SEXP monitor) {
 
   SAG_TYPE alg = *INTEGER(fit_alg);
-  R_TRACE("fit_alg=%d", alg);
+  if (DEBUG) R_TRACE("fit_alg=%d", alg);
   GlmTrainer trainer = { .lambda = (lambda == R_NilValue) ? 0:*REAL(lambda),
                          .d = REAL(d),
                          .g = REAL(g),

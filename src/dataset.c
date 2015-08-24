@@ -40,7 +40,7 @@ Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
 void count_covered_samples(Dataset* dataset, int compute_covered_mean) {
   dataset->nCovered = 0;
   dataset->Lmean = 0;
-  R_TRACE("nsamples: %d, nVars: %d", dataset->nSamples, dataset->nVars);
+  if (DEBUG) R_TRACE("nsamples: %d, nVars: %d", dataset->nSamples, dataset->nVars);
   for (int i = 0; i < dataset->nSamples; i++) {
     if (dataset->covered[i] != 0) {
       dataset->nCovered++;
