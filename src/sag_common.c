@@ -32,3 +32,18 @@ void validate_inputs(SEXP w, SEXP Xt, SEXP y, SEXP d, SEXP g, SEXP covered, SEXP
     error("covered and y must have the same number of rows");
   }
 }
+/* Initialise Monitor */
+SEXP initialize_monitor(SEXP monitor, SEXP maxIter, SEXP Xt) {
+  SEXP monitor_w;
+  if (*INTEGER(monitor)) {
+    int nVars = INTEGER(GET_DIM(Xt))[0];
+    int nPasses = *INTEGER(maxIter)/INTEGER(GET_DIM(Xt))[1];
+    monitor_w = PROTECT(allocMatrix(REALSXP , nVars, nPasses + 1));
+    Memzero(REAL(monitor_w), (nPasses + 1) * nVars);
+  } else {
+    monitor_w = R_NilValue;
+  }
+  UNPROTECT(1);
+  return monitor_w;
+}
+/* Make return list */

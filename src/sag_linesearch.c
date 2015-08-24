@@ -52,6 +52,9 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   /* Monitoring */
   int monitor = trainer->monitor;
   double * monitor_w = trainer->monitor_w;
+  /* Convergence diagnostic */
+  int * iter_count = &trainer->iter_count;
+  int * convergence_code = &trainer->convergence_code;
 
   /* Training */
   _sag_linesearch(w, Xt, y, lambda,
@@ -59,7 +62,8 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
                   d, g, loss_function, grad_function,
                   covered, nCovered, nVars, nSamples,
                   sparse, ir, jc, lastVisited,
-                  cumSum, maxIter, tol, monitor, monitor_w);
+                  cumSum, maxIter, tol, monitor, monitor_w,
+                  iter_count, convergence_code);
 
 
   /* Deallocating */
@@ -74,7 +78,8 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
                        double * d, double * g, loss_fun loss_function, loss_grad_fun grad_function,
                        int * covered, double * nCovered, int nVars, int nSamples,
                        int sparse, int * ir, int * jc, int * lastVisited,
-                       double * cumSum, int maxIter, double tol, int monitor, double * monitor_w) {
+                       double * cumSum, int maxIter, double tol, int monitor, double * monitor_w,
+                       int * iter_count, int * convergence_code) {
 
     GetRNGstate();
   /* Training variables*/
@@ -214,7 +219,17 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
   }
-
+  PutRNGstate();
+  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  /* Setting final iteration count */
+  *iter_count = k;
+  /* Checking Convergence condition */
+  if (agrad_norm < tol) {
+    *convergence_code = 1;
+  } else {
+    *convergence_code = 0;
+    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+  }
   if (sparse) {
     for (int j = 0; j < nVars; j++) {
       if (lastVisited[j] == 0) {
@@ -226,6 +241,4 @@ void sag_linesearch(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
-  PutRNGstate();
-  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

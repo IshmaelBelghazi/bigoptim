@@ -14,7 +14,7 @@ Returns gradients of model for each lambda.}
 
 \item{y}{Matrix of targets}
 
-\item{...Any}{other pass-through parameters}
+\item{...}{Any other pass-through parameters}
 }
 \description{
 Model's gradients

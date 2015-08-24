@@ -41,7 +41,10 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   SEXP covered = PROTECT(duplicate(coveredInit)); nprot++;
   SEXP Li = PROTECT(duplicate(LiInit)); nprot++;
   SEXP Lmax = PROTECT(duplicate(LmaxInit)); nprot++;
-
+  /* Initializing monitor weights data structure */
+  if (DEBUG) R_TRACE("Setting up monitor");
+  SEXP monitor_w = PROTECT(initialize_monitor(monitor, maxiter, Xt));
+  if (*INTEGER(monitor)) nprot++;  // Nothing to Protect if no monitoring
   /*======\
   | Input |
   \======*/
@@ -51,21 +54,10 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   if (DEBUG) R_TRACE("Dataset initialized");
   /* Initializing Trainer */
   if (DEBUG) R_TRACE("Initializing Trainer");
-  GlmTrainer trainer = make_GlmTrainer(lambda, alpha, d, g, maxiter,
-                                       stepSizeType, tol, fit_alg, monitor);
+  GlmTrainer trainer = make_GlmTrainer(lambda, alpha, d, g,
+                                       maxiter, stepSizeType, tol, fit_alg,
+                                       monitor, monitor_w);
   if (DEBUG) R_TRACE("Trainer initialized");
-  /* Monitoring weights */
-  if (DEBUG) R_TRACE("Setting up monitor");
-  int n_passes = trainer.maxIter / train_set.nSamples;
-  SEXP monitor_w;
-  if (trainer.monitor) {
-    monitor_w = PROTECT(allocMatrix(REALSXP, train_set.nVars, n_passes + 1)); nprot++;
-    Memzero(REAL(monitor_w), (n_passes + 1) * train_set.nVars);
-    trainer.monitor_w = REAL(monitor_w);
-  } else {
-    monitor_w = R_NilValue;
-  }
-  if (DEBUG) R_TRACE("Monitor set");
   /* Initializing Model */
   if (DEBUG) R_TRACE("Initializing model");
   GlmModel model = make_GlmModel(w, family);
@@ -73,7 +65,6 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   /*============================\
   | Stochastic Average Gradient |
   \============================*/
-  /* Counting previously covered example for manual warm starting */
   /* Training */
   if (DEBUG) R_TRACE("Training ...");
   train(&trainer, &model, &train_set);
@@ -83,16 +74,16 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   \=======*/
   if (DEBUG) R_TRACE("Setting up return S-EXP");
   SEXP convergence_code = PROTECT(allocVector(INTSXP, 1)); nprot++;
-  *INTEGER(convergence_code) = -1;
+  *INTEGER(convergence_code) = trainer.convergence_code;
   SEXP iter_count = PROTECT(allocVector(INTSXP, 1)); nprot++;
   *INTEGER(iter_count) = trainer.iter_count;
   /* Assigning variables to SEXP list */
-  SEXP results = PROTECT(allocVector(VECSXP, 8)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w, d, g, covered, Li, convergence_code, iter_count, monitor_w); // in utils.h
+  SEXP results = PROTECT(allocVector(VECSXP, 9)); nprot++;
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, w, d, g, covered, Li, Lmax, convergence_code, iter_count, monitor_w); // in utils.h
   /* Creating SEXP for list names */
-  SEXP results_names = PROTECT(allocVector(STRSXP, 8)); nprot++;
+  SEXP results_names = PROTECT(allocVector(STRSXP, 9)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "w", "d", "g",
-                "covered", "Li", "convergence_code", "iter_count", "monitor_w");
+                "covered", "Li", "Lmax", "convergence_code", "iter_count", "monitor_w");
   setAttrib(results, R_NamesSymbol, results_names);
   if (DEBUG) R_TRACE("Return S-EXP all set up");
   /* ---------------------------------------------------------------------------*/

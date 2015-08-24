@@ -6,7 +6,6 @@
 }
 ## ** Sparse matrices check
 ##' @title is.sparse
-##' @export
 ##' @param X matrix is sparse. False otherwise.
 ##' @return Boolean. TRUE if X is 
 is.sparse <- function(X) inherits(X, "sparseMatrix")

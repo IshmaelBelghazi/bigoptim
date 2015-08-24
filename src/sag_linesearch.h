@@ -15,5 +15,5 @@ void _sag_linesearch(double * w, double * Xt, double * y, double lambda,
                      int * covered, double * nCovered, int nVars,
                      int nSamples, int sparse, int * ir, int * jc,
                      int * lastVisited, double * cumSum, int maxIter, double tol,
-                     int monitor, double * monitor_w);
+                     int monitor, double * monitor_w, int * iter_count, int * convergence_code);
 #endif /* SAG_LINESEARCH_H_ */

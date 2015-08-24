@@ -31,6 +31,7 @@ GlmModel make_GlmModel(SEXP w, SEXP family) {
     break;
   default:
     error("Unrecognized glm family");
+    break;
   }
 
   return model;

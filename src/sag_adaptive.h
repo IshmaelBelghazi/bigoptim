@@ -16,5 +16,6 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
                    double alpha, double precision, double tol,
                    loss_fun loss_function, loss_grad_fun grad_fun, int sparse,
                    int *jc, int *ir, int *lastVisited, double *cumSum,
-                   double *d, double *g, int monitor, double * monitor_w);
+                   double *d, double *g, int monitor, double * monitor_w,
+                   int * iter_count, int * convergence_code);
 #endif /* SAG_ADAPTIVE_H_ */

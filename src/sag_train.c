@@ -33,3 +33,12 @@ void train(GlmTrainer* trainer, GlmModel* model, Dataset* dataset) {
   }
   if (DEBUG) R_TRACE("Training Completed");
 }
+/* Return List */
+/* Make return list */
+
+SEXP make_return_list(GlmTrainer* trainer, GlmModel* model, Dataset* dataset) {
+
+
+
+}
+

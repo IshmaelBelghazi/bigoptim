@@ -1,4 +1,3 @@
-##' @export
 .simulate_binomial <- function(true_params, sample_size, intercept=FALSE) {
 
     n_params <- length(true_params)
@@ -13,7 +12,6 @@
     return(list(X=X, y=y, true_params=true_params))
 }
 
-##' @export
 .simulate_gaussian <- function(true_params, sample_size, intercept=FALSE) {
     n_params <- length(true_params)
     X <- matrix(runif(n_params * sample_size), ncol=n_params)
@@ -26,7 +24,6 @@
     return(list(X=X, y=y, true_params=true_params))
 }
 
-##' @export
 .simulate_exponential <- function(true_params, sample_size, intercept=FALSE) {
     n_params <- length(true_params)
     X <- matrix(runif(n_params * sample_size), ncol=n_params)
@@ -40,7 +37,6 @@
     return(list(X=X, y=y, true_params=true_params))
 }
 
-##' @export
 .simulate_poisson <- function(true_params, sample_size, intercept=FALSE) {
     n_params <- length(true_params)
     X <- matrix(runif(n_params * sample_size), ncol=n_params)

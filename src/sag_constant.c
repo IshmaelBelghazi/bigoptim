@@ -42,10 +42,13 @@ void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   /* Monitoring */
   int monitor = trainer->monitor;
   double *monitor_w = trainer->monitor_w;
+  /* Convergence diagnostic */
+  int * iter_count = &trainer->iter_count;
+  int * convergence_code = &trainer->convergence_code;
   /* Training */
   _sag_constant(w, Xt, y, lambda, alpha, d, g, grad_fun, covered, nCovered,
                 nSamples, nVars, sparse, jc, ir, lastVisited, cumSum, tol,
-                maxIter, monitor, monitor_w);
+                maxIter, monitor, monitor_w, iter_count, convergence_code);
   /* Deallocating */
   if (sparse) {
     Free(lastVisited);
@@ -58,7 +61,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
                    int *covered, double *nCovered, int nSamples, int nVars,
                    int sparse, int *jc, int *ir, int *lastVisited,
                    double *cumSum, double tol, int maxIter, int monitor,
-                   double *monitor_w) {
+                   double *monitor_w, int * iter_count, int * convergence_code) {
 
   GetRNGstate();
   /* Training variables*/
@@ -162,6 +165,17 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
   }
+  PutRNGstate();
+  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  /* Setting final iteration count */
+  *iter_count = k;
+  /* Checking Convergence condition */
+  if (agrad_norm < tol) {
+    *convergence_code = 1;
+  } else {
+    *convergence_code = 0;
+    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+  }
 
   if (sparse) {
     for (int j = 0; j < nVars; j++) {
@@ -174,6 +188,5 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
-  PutRNGstate();
-  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+
 }

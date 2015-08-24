@@ -1,10 +1,12 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef UTILS_H_
+#define UTILS_H_
 #include "sag_common.h"
 
 /* Macros */
 /* DEBUG MACROS*/
+#ifndef R_TRACE
 #define R_TRACE( x, ... ) Rprintf(" TRACE @ %s:%d \t" x "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#endif
 /* Apply like Macro */
 #define APPLY(type, fun, ...) {                         \
     void end_of_list = (int[]){0};                      \
@@ -30,9 +32,15 @@
     }                                                            \
   }                                                              \
 
+
+/* Check if R_NilValue */
+#ifndef IS_R_NULL
+#define IS_R_NULL( x ) (( ( x ) == R_NilValue)? 1: 0)
+#endif
+
 /* Prototypes */
 double _log_sum_exp(const double * restrict array, const int ar_size);
 double log2(double x);
 double get_cost_agrad_norm(double * w, double * d, double lambda,
                            double nCovered, int nSamples, int nVars);
-#endif /* UTILS_H */
+#endif /* UTILS_H_ */

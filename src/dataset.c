@@ -4,18 +4,28 @@
 Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
                      SEXP Li, SEXP increasing, SEXP fit_alg, SEXP sparse) {
 
+  SAG_TYPE alg = *INTEGER(fit_alg);
   Dataset data_set = {.y = REAL(y),
                       .covered = INTEGER(covered),
                       .nCovered = 0,
                       .sparse = *INTEGER(sparse)};
 
-  if (*INTEGER(fit_alg) == LINESEARCH) {
+  switch (alg) {
+  case CONSTANT:
+    break;
+  case LINESEARCH:
     data_set.Li = REAL(Li);
-  } else if (*INTEGER(fit_alg) == ADAPTIVE) {
+    break;
+  case ADAPTIVE:
     data_set.Li = REAL(Li);
     data_set.Lmax = REAL(Lmax);
     data_set.increasing = *INTEGER(increasing);
+    break;
+  default:
+    error("Unrecognied fit algorithm");
+    break;
   }
+
   /* Initializing sample*/
   CHM_SP cXt;
   if (data_set.sparse) {

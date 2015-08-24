@@ -4,7 +4,6 @@
 ## * Various getters
 ## ** Weights
 ## *** SAG_fit
-##' @export
 ##' @title Model's weights
 ##' Returns the model's weights. 
 ##' @param object object of class SAG
@@ -23,7 +22,6 @@ coef.SAG <- function(object, ...) {
   weights
 }
 ##' ** Cost 
-##' @export
 .get_cost <- function(X, y, w, lambda, family, backend) {
   switch(family,
          binomial={
@@ -144,7 +142,7 @@ get_grad.SAG_fit <- function(object, X, y, ...) {
 ##' @param object object of class SAG 
 ##' @param X Matrix of samples
 ##' @param y Matrix of targets
-##' @param ...Any other pass-through parameters 
+##' @param ... Any other pass-through parameters 
 ##' @export
 get_grad.SAG <- function(object, X, y, ...) {
   backend <- if(is.sparse(X)) "R" else "C"
@@ -160,19 +158,17 @@ get_grad.SAG <- function(object, X, y, ...) {
   grads
 }
 ## ** Approximate Gradient
-##' @export 
 get_approx_grad <- function(object, ...) {
   UseMethod('get_approx_grad')
 }
-##' @export 
 get_approx_grad.default <- function(object, ...) {
   stop("unrecognized object class")
 }
 ##' @title get approximate gradient
 ##' Returns the models approximate gradient
-##' @export
 ##' @param  object of class SAG_fit
 ##' @param ... Any other pass-through parameters 
+##' @export
 get_approx_grad.SAG_fit <- function(object, ...) {
   object$d/NROW(object$g) + object$input$lambda * coef(object) 
 }

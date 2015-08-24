@@ -82,13 +82,15 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   /* Monitoring */
   int monitor = trainer->monitor;
   double * monitor_w = trainer->monitor_w;
-
+  /* Convergence diagnostic */
+  int * iter_count = &trainer->iter_count;
+  int * convergence_code = &trainer->convergence_code;
   /* Training */
   _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples,
                 covered, unCoveredMatrix, LiMatrix, nDescendants, nCovered,
                 Lmean, nLevels, nextpow2, maxIter, lambda, alpha, precision,
                 tol, loss_function, grad_fun, sparse, jc, ir, lastVisited,
-                cumSum, d, g, monitor, monitor_w);
+                cumSum, d, g, monitor, monitor_w, iter_count, convergence_code);
   /* Deallocating */
   if (sparse) {
     Free(lastVisited);
@@ -107,7 +109,8 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
                    double alpha, double precision, double tol,
                    loss_fun loss_function, loss_grad_fun grad_fun, int sparse,
                    int *jc, int *ir, int *lastVisited, double *cumSum,
-                   double *d, double *g, int monitor, double * monitor_w) {
+                   double *d, double *g, int monitor, double * monitor_w,
+                   int * iter_count, int * convergence_code) {
 
   GetRNGstate();
   /* Training variables*/
@@ -321,6 +324,18 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     }
   }
 
+  PutRNGstate();
+  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  /* Setting final iteration count */
+  *iter_count = k;
+  /* Checking Convergence condition */
+  if (agrad_norm < tol) {
+    *convergence_code = 1;
+  } else {
+    *convergence_code = 0;
+    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+  }
+
   if (sparse) {
     for (int j = 0; j < nVars; j++) {
       if (lastVisited[j] == 0) {
@@ -332,6 +347,4 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     scaling = c;
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
-  PutRNGstate();
-  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

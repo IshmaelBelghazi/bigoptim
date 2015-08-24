@@ -6,7 +6,6 @@
 ## P(C_1|x) = P(y| x) = \frac{1}{exp(y w^{t}x)}
 ## E = -LL + reg = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
 ## \nabla E = \frac{\sum_n=1^{N} \frac{-y_{n}x_{n}}{(1 + exp(y^{n}w^{t}x_{n}))}}{N} + \lambda W
-##' @export
 .R_glm_cost <- function(X, y, w, lambda, loss_fun) {
   innerProd <- X %*% w
   losses <- loss_fun(y, innerProd)
@@ -22,29 +21,20 @@
 }
 ## * GLM individual loss function
 ## ** Gaussian
-##' @export
 .R_gaussian_loss <- function(y, innerProd) 0.5 * (y - innerProd)^2
-##' @export
 .R_gaussian_loss_grad <- function(y, innerProd) -(y - innerProd)
 ## ** Binomial
-##' @export
 .R_binomial_loss <- function(y, innerProd) log(1 + exp(-y * innerProd))
-##' @export
 .R_binomial_loss_grad <- function(y, innerProd) -y/(1 + exp(y * innerProd)) 
 ## ** Exponential 
-##' @export
 .R_exponential_loss <- function(y, innerProd) exp(-y * innerProd) 
-##' @export
 .R_exponential_loss_grad <- function(y, innerProd) -y * exp(-y * innerProd)
 ## ** Poisson
-##' @export
 .R_poisson_loss <- function(y, innerProd) exp(innerProd) - y * innerProd 
-##' @export
 .R_poisson_loss_grad <- function(y, innerProd) exp(innerProd) - y
 ## TODO(Ishmael): Add cost. gradient in math reform and reference
 ## * GLM cost functions
 ## ** Gaussian
-##' @export
 .gaussian_cost <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -56,7 +46,6 @@
          },
          stop("unrecognized backend"))
 }
-##' @export
 .gaussian_cost_grad <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -70,7 +59,6 @@
          stop("unrecognized backend"))
 }
 ## ** Binomial
-##' @export
 .binomial_cost <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -83,7 +71,6 @@
          },
          stop("unrecognized backend"))
 }
-##' @export
 .binomial_cost_grad <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -97,7 +84,6 @@
          stop("unrecognized backend"))
 }
 ## ** Exponential
-##' @export
 .exponential_cost <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -110,7 +96,6 @@
          },
          stop("unrecognized backend"))
 }
-##' @export
 .exponential_cost_grad <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -124,7 +109,6 @@
          stop("unrecognized backend"))
 }
 ## ** Poisson
-##' @export
 .poisson_cost <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={
@@ -136,7 +120,6 @@
          },
          stop("unrecognized backend"))
 }
-##' @export
 .poisson_cost_grad <- function(X, y, w, lambda=0, backend="R") {
   switch(backend,
          R={

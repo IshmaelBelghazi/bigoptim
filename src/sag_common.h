@@ -14,7 +14,7 @@
 
 /* DEBUG */
 #ifndef DEBUG
-#define DEBUG 0  // Enable/diasble traces.
+#define DEBUG 1  // Enable/diasble traces.
 #endif
 /* Constant */
 const static double precision = 1.490116119384765625e-8;
@@ -23,5 +23,6 @@ typedef enum {CONSTANT, LINESEARCH, ADAPTIVE} SAG_TYPE;
 /* Prototypes */
 /* Error Checking */
 void validate_inputs(SEXP w, SEXP Xt, SEXP y, SEXP d, SEXP g, SEXP covered, SEXP sparse);
-
+/* Monitor weights initialization */
+SEXP initialize_monitor(SEXP monitor, SEXP maxIter, SEXP Xt);
 #endif /* SAG_COMMON_H_ */
