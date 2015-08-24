@@ -16,7 +16,6 @@ Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
     data_set.Lmax = REAL(Lmax);
     data_set.increasing = *INTEGER(increasing);
   }
-
   /* Initializing sample*/
   CHM_SP cXt;
   if (data_set.sparse) {
@@ -33,9 +32,7 @@ Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
     data_set.nSamples = INTEGER(GET_DIM(Xt))[1];
     data_set.nVars = INTEGER(GET_DIM(Xt))[0];
   }
-
   return data_set;
-
 }
 
 /* Utils */
@@ -43,6 +40,7 @@ Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
 void count_covered_samples(Dataset* dataset, int compute_covered_mean) {
   dataset->nCovered = 0;
   dataset->Lmean = 0;
+  R_TRACE("nsamples: %d, nVars: %d", dataset->nSamples, dataset->nVars);
   for (int i = 0; i < dataset->nSamples; i++) {
     if (dataset->covered[i] != 0) {
       dataset->nCovered++;

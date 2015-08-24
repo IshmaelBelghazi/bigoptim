@@ -49,15 +49,15 @@ test_that("Approximate gradient is small on empirical data", {
   expect_less_than(approx_grad_norm$adaptive, eps)
 })
 
-## A.2: True gradient is small on simulated data
-## empr_grad <- lapply(sag_empr_fits, function(fit) {
-##   get_grad(fit, dataset$X, dataset$y)
-## })
+##A.2: True gradient is small on simulated data
+empr_grad <- lapply(sag_empr_fits, function(fit) {
+  get_grad(fit, dataset$X, dataset$y)
+})
 
-## empr_grad_norm <- lapply(empr_grad, function(grad) norm(grad, 'F'))
+empr_grad_norm <- lapply(empr_grad, function(grad) norm(grad, 'F'))
 
-## test_that("True Gradient is small on empirical data", {
-##   expect_less_than(empr_grad_norm$constant, eps)
-##   expect_less_than(empr_grad_norm$linesearch, eps)
-##   expect_less_than(empr_grad_norm$adaptive, eps)
-## })
+test_that("True Gradient is small on empirical data", {
+  expect_less_than(empr_grad_norm$constant, eps)
+  expect_less_than(empr_grad_norm$linesearch, eps)
+  expect_less_than(empr_grad_norm$adaptive, eps)
+})

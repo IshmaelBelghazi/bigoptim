@@ -7,7 +7,7 @@ void sag_warm(GlmTrainer* trainer, GlmModel* model, Dataset* dataset,
 
   int nVars = dataset->nVars;
   for (int i = 0; i < nLambdas; i++) {
-    R_TRACE("Processing lambda[%d]=%f. %d/%d", i, lambdas[i], i, nLambdas);
+    R_TRACE("Processing lambda[%d]=%f. %d/%d", i, lambdas[i], i + 1, nLambdas);
     /* selecting lambda */
     trainer->lambda = lambdas[i];
     if (DEBUG) {

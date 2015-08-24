@@ -1,4 +1,3 @@
-suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(glmnet))
 ## Loading Data set
 data(covtype.libsvm)
@@ -14,17 +13,17 @@ p <- NCOL(X)
 n_passes <- 50  ## number of passses trough the dataset
 maxiter <- n * n_passes
 lambda <- 1/n 
-tol <- 1e-6
+tol <- 1e-10
 family <- "binomial"
 ## Fitting with glmnet ---------------------------------------------------------
 glmnet_fits <- glmnet(X, y, family=family, nlambda=10, standardize=FALSE, intercept=FALSE, alpha=0)
 ## Getting Lambdas
 lambdas <- glmnet_fits$lambda
-sag_fits_warm <- sag(X, y, lambdas=lambdas, maxiter=maxiter, tol=0, family=family, fit_alg="constant")
-grad_norm_fun <- function(w, lambda) norm(.C_binomial_cost_grad(X, y, w, lambda), 'F')
-sag_fits_grad_norm <- data.frame(lambda=numeric(), sag_fit_warm=numeric())
-for (i in 1:length(lambdas)) {
-  lambda_i <- sort(lambdas, decreasing=TRUE)[i]
-  sag_fits_grad_norm[i, 1] <- lambda_i
-  sag_fits_grad_norm[i, 2] <- grad_norm_fun(sag_fits_warm[i,, drop=FALSE], lambda_i)
-}
+## Fitting with stochastic average gradient descent with warm starting ----------
+sag_fits_warm <- sag(X, y, lambdas=lambdas, maxiter=maxiter, tol=tol, family=family, fit_alg="linesearch")
+## Getting costs ----------------------------------------------------------------
+costs <- get_cost(sag_fits_warm, X, y)
+print(costs)
+## Getting Gradients ------------------------------------------------------------
+grads <- get_grad(sag_fits_warm, X, y)
+print(grads)

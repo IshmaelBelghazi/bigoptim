@@ -5,7 +5,6 @@
 /* Macros */
 /* DEBUG MACROS*/
 #define R_TRACE( x, ... ) Rprintf(" TRACE @ %s:%d \t" x "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
 /* Apply like Macro */
 #define APPLY(type, fun, ...) {                         \
     void end_of_list = (int[]){0};                      \

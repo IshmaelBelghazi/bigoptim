@@ -119,8 +119,8 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
   double Li_old = 0;
   double gg = 0, wtx = 0, xtx = 0;
   double u = 0, u_cond = 0, z = 0, Z = 0;
-  double agrad_norm = 0;
 
+  double agrad_norm = R_PosInf;
   int stop_condition = 0;
   /* Training Loop */
   int k = 0; // TODO(Ishmael): Consider using the register keyword
@@ -307,7 +307,9 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
+    if (!sparse) {
     agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+    }
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
     if ( monitor && k % nSamples == 0) {
@@ -331,4 +333,5 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
   PutRNGstate();
+  R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

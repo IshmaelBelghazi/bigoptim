@@ -1,81 +1,5 @@
-## * Loss functions
-## ** Gaussian
-## TODO(Ishmael): Add cost. gradient in math reform and reference
-##' @export
-.gaussian_cost <- function(X, y, w, lambda=0, backend="R") {
-  switch(backend,
-         R={
-           .R_gaussian_cost(X=X, y=y, w=w, lambda=lambda)
-         },
-         C={
-           .C_gaussian_cost(X=X, y=y, w=w, lambda=lambda)
-         },
-         stop("unrecognized backend"))
-}
-##' @export
-.gaussian_cost_grad <- function(X, y, w, lambda=0, backend="R") {
-  switch(backend,
-         R={
-           .R_gaussian_cost_grad(X=X, y=y, w=w, lambda=lambda)
-         },
-         C={
-           .C_gaussian_cost_grad(X=X, y=y, w=w, lambda=lambda)
-         },
-         stop("unrecognized backend"))
-}
-
-##' @export
-.R_gaussian_cost <- function(X, y, w, lambda=0) {
-  innerProd <- X %*% w
-  losses <- 0.5 * (y - innerProd)^2
-  loss <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
-}
-
-##' @export
-.R_gaussian_cost_grad <- function(X, y, w, lambda=0) {
-  grad <- matrix(0, nrow=NROW(w), ncol=1)
-  for (i in 1:NROW(X)) {
-    term = -(y[i] - X[i, ] %*% w)
-    grad <- grad + term * X[i, ]
-  }
-  grad/NROW(X) + lambda * w
-}
-
-##' @export
-##' @useDynLib bigoptim, .registration=TRUE
-.C_gaussian_cost <- function(X, y, w, lambda=0) {
-  .Call("C_gaussian_cost", t(X), y, w, lambda)
-}
-
-##' @export
-##' @useDynLib bigoptim, .registration=TRUE
-.C_gaussian_cost_grad <- function(X, y, w, lambda=0) {
-  .Call("C_gaussian_cost_grad", t(X), y, w, lambda)
-}
-
-## *** Binomial
-## ** Binomial Cost
-##' @export
-.binomial_cost <- function(X, y, w, lambda=0, backend="R") {
-  switch(backend,
-         R={
-           .R_binomial_cost(X=X, y=y, w=w, lambda=lambda)
-         },
-         C={
-           .C_binomial_cost(X=X, y=y, w=w, lambda=lambda)
-         },
-         stop("unrecognized backend"))
-}
-.binomial_cost_grad <- function(X, y, w, lambda=0, backend="R") {
-  switch(backend,
-         R={
-           .R_binomial_cost_grad(X=X, y=y, w=w, lambda=lambda)
-         },
-         C={
-           .C_binomial_cost_grad(X=X, y=y, w=w, lambda=lambda)
-         },
-         stop("unrecognized backend"))
-}
+## * GLM generic
+## Cost and gradient structure of GLMs cost functions differ only in the form of the individual loss_fun functions.
 ## Reference Schmidt (2014) and Bishop (2006)
 ## P(C_1|x) = \frac{1}{exp(-w^{t}x)}
 ## D = {y_n, x_n}_{n=1}^{N} where y_{n} \in {-1, 1}
@@ -83,29 +7,145 @@
 ## E = -LL + reg = \frac{\sum_n=1^{N} log(1 + exp(-y^{n}w^{t}x_{n}))}{N} + 0.5 \lambda ||W||_{2}^{2}
 ## \nabla E = \frac{\sum_n=1^{N} \frac{-y_{n}x_{n}}{(1 + exp(y^{n}w^{t}x_{n}))}}{N} + \lambda W
 ##' @export
-.R_binomial_cost <- function(X, y, w, lambda=0) {
-  innerProd <- X  %*% w
-  losses <- log(1 + exp(-y * innerProd))
-  cost <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2) 
+.R_glm_cost <- function(X, y, w, lambda, loss_fun) {
+  innerProd <- X %*% w
+  losses <- loss_fun(y, innerProd)
+  cost <- sum(losses)/NROW(X) + 0.5 * lambda * sum(w^2)
   cost
 }
-##' @export
-.R_binomial_cost_grad <- function(X, y, w, lambda=0) {
-  grad <- matrix(0, nrow=NROW(w), ncol=1)
-  for (i in 1:NROW(X)) {
-    term <- -y[i]/(1 + exp(y[i] * (X[i, ] %*% w)))
-    grad <- grad + term * X[i, ]
-  }
-  grad/NROW(X) + lambda * w
+.R_glm_cost_grad <- function(X, y, w, lambda, loss_grad_fun) {
+  innerProd <- X %*% w
+  innerprod_grads <- loss_grad_fun(y, innerProd)
+  grads <- X * as.vector(innerprod_grads)
+  grad <- Matrix::colMeans(grads) + lambda * w
+  as.matrix(grad)
 }
+## * GLM individual loss function
+## ** Gaussian
+##' @export
+.R_gaussian_loss <- function(y, innerProd) 0.5 * (y - innerProd)^2
+##' @export
+.R_gaussian_loss_grad <- function(y, innerProd) -(y - innerProd)
+## ** Binomial
+##' @export
+.R_binomial_loss <- function(y, innerProd) log(1 + exp(-y * innerProd))
+##' @export
+.R_binomial_loss_grad <- function(y, innerProd) -y/(1 + exp(y * innerProd)) 
+## ** Exponential 
+##' @export
+.R_exponential_loss <- function(y, innerProd) exp(-y * innerProd) 
+##' @export
+.R_exponential_loss_grad <- function(y, innerProd) -y * exp(-y * innerProd)
+## ** Poisson
+##' @export
+.R_poisson_loss <- function(y, innerProd) exp(innerProd) - y * innerProd 
+##' @export
+.R_poisson_loss_grad <- function(y, innerProd) exp(innerProd) - y
+## TODO(Ishmael): Add cost. gradient in math reform and reference
+## * GLM cost functions
+## ** Gaussian
+##' @export
+.gaussian_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost(X, y, w, lambda, .R_gaussian_loss)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_gaussian_cost", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+##' @export
+.gaussian_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost_grad(X=X, y=y, w=w, lambda=lambda,
+                            .R_gaussian_loss_grad)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_gaussian_cost_grad", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+## ** Binomial
+##' @export
+.binomial_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost(X, y, w, lambda,
+                       .R_binomial_loss)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_binomial_cost", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+##' @export
+.binomial_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost_grad(X=X, y=y, w=w, lambda=lambda,
+                            .R_binomial_loss_grad)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_binomial_cost_grad", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+## ** Exponential
+##' @export
+.exponential_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost(X, y, w, lambda, .R_exponential_loss)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_exponential_cost", t(X), y, w, lambda)
 
-##' @export
-##' @useDynLib bigoptim, .registration=TRUE
-.C_binomial_cost <- function(X, y, w, lambda=0) {
-  .Call("C_binomial_cost", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
 }
 ##' @export
-##' @useDynLib bigoptim, .registration=TRUE
-.C_binomial_cost_grad <- function(X, y, w, lambda=0) {
-  .Call("C_binomial_cost_grad", t(X), y, w, lambda)
+.exponential_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost_grad(X=X, y=y, w=w, lambda=lambda,
+                            .R_exponential_loss_grad)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_exponential_cost_grad", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+## ** Poisson
+##' @export
+.poisson_cost <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost(X, y, w, lambda, .R_poisson_loss)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_poisson_cost", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
+}
+##' @export
+.poisson_cost_grad <- function(X, y, w, lambda=0, backend="R") {
+  switch(backend,
+         R={
+           .R_glm_cost_grad(X=X, y=y, w=w, lambda=lambda,
+                            .R_poisson_loss_grad)
+         },
+         C={
+           if (is.sparse(X)) stop("sparse matrices not support in C backend")
+           .Call("C_poisson_cost_grad", t(X), y, w, lambda)
+         },
+         stop("unrecognized backend"))
 }

@@ -27,10 +27,12 @@ void sag_constant(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   int *lastVisited = NULL;
   double *cumSum = NULL;
   if (sparse) {
+    R_TRACE("Populating sparse pointers");
     /* Sparce indices*/
     jc = dataset->jc;
     ir = dataset->ir;
     /* Allocate Memory Needed for lazy update */
+    R_TRACE("Allocating sparse variables");
     cumSum = Calloc(maxIter, double);
     lastVisited = Calloc(nVars, int);
   }
@@ -64,7 +66,7 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
   double c = 1.0;
   double scaling = 0, innerProd = 0, grad = 0;
 
-  double agrad_norm = 0;
+  double agrad_norm = R_PosInf;
 
   int stop_condition = 0;
   /* Training Loop */
@@ -147,7 +149,9 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
-    agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+    if (!sparse) {
+      agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+    }
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
     if (monitor && k % nSamples == 0) {
@@ -171,4 +175,5 @@ void _sag_constant(double *w, double *Xt, double *y, double lambda,
     F77_CALL(dscal)(&nVars, &scaling, w, &one);
   }
   PutRNGstate();
+  R_TRACE("Final approxite gradient norm: %F", agrad_norm);
 }

@@ -18,7 +18,7 @@ context("GLM -- GAUSSIAN")
 ## Setting up Tests ##
 ######################
 ## Algorithms
-model <- "gaussian"
+family <- "gaussian"
 algs <- list(##constant="constant",
              linesearch="linesearch",
              adaptive="adaptive")
@@ -40,7 +40,7 @@ sim_data$X <- scale(sim_data$X)
 sag_sim_fits <- lapply(algs, function(alg) sag_fit(sim_data$X, sim_data$y,
                                                    lambda=lambda,
                                                    maxiter=maxiter,
-                                                   model=model,
+                                                   family=family,
                                                    standardize=FALSE,
                                                    tol=tol,
                                                    fit_alg=alg))
@@ -50,7 +50,7 @@ approx_grad_norm <- lapply(sag_sim_fits, function(fit)
                                            norm(get_approx_grad(fit), 'F'))
 
 test_that("Approximate gradient is small on simulated data", {
-  expect_less_than(approx_grad_norm$constant, eps)
+  ##expect_less_than(approx_grad_norm$constant, eps)
   expect_less_than(approx_grad_norm$linesearch, eps)
   expect_less_than(approx_grad_norm$adaptive, eps)
 })
@@ -62,7 +62,7 @@ sim_grad <- lapply(sag_sim_fits, function(fit) {
 sim_grad_norm <- lapply(sim_grad, function(grad) norm(grad, 'F'))
 
 test_that("True Gradient is small on simulated data", {
-  expect_less_than(sim_grad_norm$constant, eps)
+  ##expect_less_than(sim_grad_norm$constant, eps)
   expect_less_than(sim_grad_norm$linesearch, eps)
   expect_less_than(sim_grad_norm$adaptive, eps)
 })

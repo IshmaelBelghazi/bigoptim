@@ -69,6 +69,7 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   Memzero(REAL(lambda_w), LENGTH(lambdas) * train_set.nVars);
   /* Training */
   R_TRACE("Training ...");
+  R_TRACE("Lambdas length:%d", LENGTH(lambdas));
   sag_warm(&trainer, &model, &train_set,
            REAL(lambdas), LENGTH(lambdas), REAL(lambda_w));
   train(&trainer, &model, &train_set);

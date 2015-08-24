@@ -15,8 +15,7 @@ n_passes <- 50  ## number of passses trough the dataset
 maxiter <- n * n_passes
 lambda <- 1/n 
 tol <- 0
-
-model <- "binomial"
+family <- "binomial"
 fit_algs <- list(constant="constant",
                  linesearch="linesearch",
                  adaptive="adaptive")
@@ -24,30 +23,31 @@ fit_algs <- list(constant="constant",
 sag_fits <- lapply(fit_algs, function(fit_alg) sag_fit(X, y,
                                                    lambda=lambda,
                                                    maxiter=maxiter,
-                                                   model=model,
+                                                   family=family,
                                                    fit_alg=fit_alg,
                                                    standardize=FALSE,
                                                    tol=tol, monitor=TRUE))
 print(lapply(sag_fits, function(sag_fit) get_cost(sag_fit, X, y)))
-
 ## Functions --------------------------------------------------------------------
 make_monitor_table <- function(object, X, y, omit_init_state=TRUE) {
   monitor_fun <- list(cost=function(w)
-                             .C_binomial_cost(X, y, w,
-                                              object$input$lambda),
+                             .get_cost(X, y, w,
+                                       object$input$lambda,
+                                       family=family,
+                                       backend="C"),
                       grad_norm=function(w)
-                                  norm(.C_binomial_cost_grad(X, y, w,
-                                                             object$input$lambda),
+                                  norm(.get_grad(X, y, w,
+                                                 lambda=object$input$lambda,
+                                                 family=family,
+                                                 backend="C"),
                                        type='F'))
   monitor_w <- object$monitor_w
-  if (omit_init_state) {
-    monitor_w <- monitor_w[, -1, drop=FALSE]
-  }
+  if (omit_init_state) monitor_w <- monitor_w[, -1, drop=FALSE]
+  
   mon <- lapply(monitor_fun, function(fun) apply(monitor_w, 2, fun))
   mon$effective_pass <- seq(0, length(mon$cost) - 1)
-  if (omit_init_state) {
-    mon$effective_pass <- mon$effective_pass + 1
-  }
+  if (omit_init_state) mon$effective_pass <- mon$effective_pass + 1
+  
   mon$fit_alg <- rep(object$input$fit_alg, length(mon$cost))
   as.data.frame(mon)
 }
@@ -57,8 +57,10 @@ make_glmnet_monitor_table <- function(X, y, lambda, n_passes) {
   glmnet_fit <- glmnet(X, as.factor(y), alpha=0, family="binomial",
                        lambda=lambda, standardize=FALSE, intercept=FALSE)
   glmnet_w <- as.matrix(coef(glmnet_fit))[-1]
-  glm_cost <- .C_binomial_cost(X, y, glmnet_w, lambda=lambda)
-  glm_cost_grad <- norm(.C_binomial_cost_grad(X, y, glmnet_w, lambda=lambda), 'F')
+  glm_cost <- .get_cost(X, y, glmnet_w, lambda=lambda,
+                        family=family, backend="C")
+  glm_cost_grad <- norm(.get_grad(X, y, glmnet_w, lambda=lambda,
+                                  family=family, backend="C"), 'F')
   effective_pass <- 1:n_passes
   data.frame(cost=rep(glm_cost, n_passes),
              grad_norm=rep(glm_cost_grad, n_passes),
@@ -77,9 +79,11 @@ make_graph_by_pass <- function(training_table) {
                            y=cost,
                            color=fit_alg)) +
     geom_line() +
-    xlab("Effective pass") +
-    ylab("cost") +
-    ggtitle("cost vs effective passes")
+    xlab("Number of effective passes") +
+    ylab("Cost") +
+    ggtitle("Cost per effective pass through the covtype dataset") +
+    scale_colour_discrete(name="Fit algorithm")
+
   ## Gradient Frobenius norm monitoring graph
   grad_norm_graph <- ggplot(training_table,
                        aes(x=effective_pass,
@@ -87,9 +91,10 @@ make_graph_by_pass <- function(training_table) {
                            color=fit_alg)) +
     geom_line() +
     scale_y_log10() +
-    xlab("Effective pass") +
-    ylab("grad_norm") +
-    ggtitle("grad_norm vs effective passes")
+    xlab("Number of effective passes") +
+    ylab("gradient L2 norm (Log scale)") +
+    ggtitle("Gradient L2 norm per effective pass through the covtype dataset") +
+    scale_colour_discrete(name="Fit algorithm")
 
 
   list(cost=cost_graph, grad_norm=grad_norm_graph)

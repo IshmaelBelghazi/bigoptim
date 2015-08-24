@@ -1,4 +1,4 @@
-##' @title Stochastic Average Gradient Fit
+##' @title Stochastic Average Gradient
 ##' @param X Matrix, possibly sparse of features.
 ##' @param y Matrix of targets.
 ##' @param lambda Scalar. L2 regularization parameter.
@@ -8,15 +8,15 @@
 ##' @param stepSizeType scalar default is 1 to use 1/L, set to 2 to use 2/(L + n*myu). Only used when fit_alg="linesearch"
 ##' @param Li Scalar or Matrix.Initial individual Lipschitz approximation. 
 ##' @param Lmax Initial global Lipschitz approximation.
-##' @param increasing Boolean. TRUE allows increase of Lipschitz coeffecient. False allows only decrease.
+##' @param increasing Boolean. TRUE allows for both increase and decrease of lipschitz coefficients. False allows only decrease.
 ##' @param d Initial approximation of cost function gradient.
 ##' @param g Initial approximation of individual losses gradient.
 ##' @param covered Matrix of covered samples.
 ##' @param standardize Boolean. Scales the data if True
 ##' @param tol Real. Miminal required approximate gradient norm before convergence.
 ##' @param family One of "binomial", "gaussian", "exponential" or "poisson"
-##' @param fit_alg One of "constant", "linesearch", or "adaptive"
-##' @param monitor Boolean. If TRUE returns Matrix of weights after each effective pass through the dataset.
+##' @param fit_alg One of "constant", "linesearch" (default), or "adaptive"
+##' @param monitor Boolean. If TRUE returns matrix of weights after each effective pass through the dataset.
 ##' @param ... Any other pass-through parameters.
 ##' @export
 ##' @return object of class SAG_fit
@@ -24,7 +24,7 @@
 sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     d=NULL, g=NULL, covered=NULL, standardize=FALSE,
-                    tol=1e-3, family="binomial", fit_alg="constant",
+                    tol=1e-7, family="binomial", fit_alg="constant",
                     monitor=FALSE, ...) {
 
   ## Checking  for sparsity
@@ -108,7 +108,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                    alpha, as.integer(stepSizeType), Li, Lmax,
                    increasing, d, g, covered, tol, as.integer(maxiter),
                    as.integer(family_id), as.integer(fit_alg_id),
-                   sparse, as.integer(monitor))
+                   as.integer(sparse), as.integer(monitor))
 
   ##,---------------------------
   ##| Structuring SAG_fit object
@@ -118,7 +118,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
   sag_fit
 }
 
-##' @title Stochastic Average Gradient Fit with warm-starting
+##' @title Stochastic Average Gradient with warm-starting
 ##' @param X Matrix, possibly sparse of features.
 ##' @param y Matrix of targets.
 ##' @param lambdas Vector. Vector of L2 regularization parameters. 
@@ -135,16 +135,15 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
 ##' @param standardize Boolean. Scales the data if True
 ##' @param tol Real. Miminal required approximate gradient norm before convergence.
 ##' @param family One of "binomial", "gaussian", "exponential" or "poisson"
-##' @param fit_alg One of "constant", "linesearch", or "adaptive"
-##' @param monitor Boolean. If TRUE returns Matrix of weights after each effective pass through the dataset.
+##' @param fit_alg One of "constant", "linesearch" (default), or "adaptive". 
 ##' @param ... Any other pass-through parameters.
 ##' @export
-##' @return object of class SAG_fit
+##' @return object of class SAG
 ##' @useDynLib bigoptim, .registration=TRUE
- <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
+sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                 stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                 d=NULL, g=NULL, covered=NULL, standardize=FALSE,
-                tol=1e-3, family="binomial", fit_alg="constant",
+                tol=1e-7, family="binomial", fit_alg="constant",
                 ...) {
 
   lambdas <- sort(lambdas, decreasing=TRUE)
@@ -203,13 +202,13 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
   switch(fit_alg,
          constant={
            if (is.null(alpha)) {
-             Lmax <- 0.25 * max(Matrix::rowSums(X^2)) + lambda
+             ## TODO(Ishmael): Lmax depends on lambda for warmstarting 
+             Lmax <- 0.25 * max(Matrix::rowSums(X^2)) + lambdas[1]
              alpha <-  1/Lmax ## 1/(16 * Lmax)
            }
          },
          linesearch={
            if (is.null(Lmax)) {
-             ## TODO(Ishmael): Confusion between Lmax and stepSize
              Li <- 1
            }
          },
@@ -225,11 +224,11 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
          },
          stop("unrecognized fit algorithm"))
 
-  sag_fits <- .Call("C_sag", w, Matrix::t(X), y, lambda,
+  sag_fits <- .Call("C_sag", w, Matrix::t(X), y, lambdas,
                     alpha, as.integer(stepSizeType), Li, Lmax,
                     increasing, d, g, covered, tol, as.integer(maxiter),
                     as.integer(family_id), as.integer(fit_alg_id),
-                    sparse)
+                    as.integer(sparse))
 
   ##,---------------------------
   ##| Structuring SAG_fit object
