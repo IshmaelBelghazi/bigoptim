@@ -29,44 +29,10 @@ static R_CallMethodDef CallEntries[] = {
   {NULL, NULL, 0}
 };
 
-/* local cholmod_common struct*/
-cholmod_common c;
-
-/** This is the CHOLMOD error handler from lme4*/
-void attribute_hidden bigoptim_R_cholmod_error(int status,
-                                               const char *file,
-                                               int line,
-                                               const char *message) {
-  if (status < 0) {
-#ifdef Failure_in_matching_Matrix
-    M_cholmod_defaults(&c);
-    c.final_ll = 1;
-#endif
-
-    error("Cholmod error '%s' at file:%s, line %d", message, file, line);
-  } else {
-    warning("Cholmod warning '%s' at file:%s, line %d",
-            message, file, line);
-  }
-}
-
 #ifdef HAVE_VISIBILITY_ATTRIBUTE
 __attribute__ ((visibility ("default")))
 #endif
 void R_init_bigoptim(DllInfo *dll) {
   R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
-
-  M_R_cholmod_start(&c);
-  c.final_ll = 1;	    /* LL' form of simplicial factorization */
-
-  /* need own error handler, that resets  final_ll (after *_defaults()) : */
-  c.error_handler = bigoptim_R_cholmod_error;
-}
-
-/** Finalizer for cplm called upon unloading the package.
- *
- */
-void R_unload_bigoptim(DllInfo *dll) {
-  M_cholmod_finish(&c);
 }
