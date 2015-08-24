@@ -25,18 +25,19 @@ y[y == 2] <- -1
 maxiter <- NROW(X) * 10  ## 10 passes throught the dataset
 lambda <- 1/NROW(X) 
 sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
-                      Li=Li, stepSizeType=1,
                       maxiter=maxiter, 
-                      tol=1e-08, family="binomial", fit_alg="linesearch",
+                      tol=1e-08, 
+                      family="binomial", 
+                      fit_alg="linesearch",
                       standardize=FALSE)
 ## Getting weights
-weighs <- coef(sag_ls_fit)
+weights <- coef(sag_ls_fit)
 ## Getting cost
 cost <- get_cost(sag_ls_fit)
 #+END_SRC
 * Example: Demo -- Monitoring gradient norm
 #+BEGIN_SRC R
-data(monitoring_training)
+data("monitoring_training")
 #+END_SRC
 #+CAPTION: Gradient norm after each effective pass through the dataset
 #+NAME: gradien_monitoring
