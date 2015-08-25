@@ -36,12 +36,10 @@ sample_size <- NROW(dataset$X)
 eps <- 1e-02
 ## Training parameters
 tol <- 1e-08  ## Stop training when norm of approximate gradient is smaller than tol
-maxiter <- sample_size * 500
 lambda <- 1/sample_size
 ## A. Empirical Data tests
 sag_empr_fits <- lapply(algs, function(alg) sag_fit(dataset$X, dataset$y,
                                                     lambda=lambda,
-                                                    maxiter=maxiter,
                                                     family=family,
                                                     standardize=FALSE,
                                                     tol=tol,
