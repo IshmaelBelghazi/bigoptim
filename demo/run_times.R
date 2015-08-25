@@ -55,7 +55,7 @@ y_covtype[y_covtype == 2] <- -1
 ## Setting seed
 maxiter <- NROW(X_covtype) * 10 
 lambda <- 1/NROW(X_covtype)
-tol <- 1e-3
+tol <- 1e-4
 print("Timing on covertype ...")
 fit_times_covtype <- time_fit(X_covtype, y_covtype, lambda, maxiter, family, tol)
 print("... timing completed")
@@ -67,7 +67,7 @@ y_rcv1_train <- rcv1_train$y
 maxiter <- NROW(X_covtype) * 5
 lambda <- 1/NROW(X_covtype)
 tol <- 0
-print("Timing on covertype ...")
+print("Timing on rcv1_train ...")
 fit_times_rcv1_train <- time_fit(X_rcv1_train, y_rcv1_train,
                                  lambda, maxiter, family, tol)
 print("... timing completed")
