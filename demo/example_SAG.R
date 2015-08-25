@@ -1,12 +1,12 @@
 library(Matrix)
 data(rcv1_train)
 X <- rcv1_train$X
-X <- cBind(rep(1, NROW(X), X), X)
+##X <- cBind(rep(1, NROW(X), X), X)
 y <- rcv1_train$y
 n <- NROW(X)
 p <- NCOL(X)
 ## Setting seed
-set.seed(0)
+##set.seed(0)
 maxIter <- n * 20 
 lambda <- 1/n
 tol <- 0

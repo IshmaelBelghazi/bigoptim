@@ -20,34 +20,39 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double *Lmean = &dataset->Lmean;
   /* Do the O(n log n) initialization of the data structures
      will allow sampling in O(log(n)) time */
-  int nextpow2 = pow(2, ceil(log2(nSamples)/log2(2)));
+  int nextpow2 = pow(2, ceil(log2(nSamples) / log2(2)));
   int nLevels = 1 + (int)ceil(log2(nSamples));
-  if (DEBUG) R_TRACE("next power of 2 is: %d\n",nextpow2);
-  if (DEBUG) R_TRACE("nLevels = %d\n",nLevels);
+  if (DEBUG)
+    R_TRACE("next power of 2 is: %d\n", nextpow2);
+  if (DEBUG)
+    R_TRACE("nLevels = %d\n", nLevels);
   /* Counts number of descendents in tree */
-  double * nDescendants = Calloc(nextpow2 * nLevels, double);
+  double *nDescendants = Calloc(nextpow2 * nLevels, double);
   /* Counts number of descenents that are still uncovered */
-  double * unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
+  double *unCoveredMatrix = Calloc(nextpow2 * nLevels, double);
   /* Sums Lipschitz constant of loss over descendants */
-  double * LiMatrix = Calloc(nextpow2 * nLevels, double);
+  double *LiMatrix = Calloc(nextpow2 * nLevels, double);
   for (int i = 0; i < nSamples; i++) {
     nDescendants[i] = 1;
     if (covered[i]) {
-        LiMatrix[i] = Li[i];
+      LiMatrix[i] = Li[i];
     } else {
       unCoveredMatrix[i] = 1;
     }
   }
   int levelMax = nextpow2;
   for (int level = 1; level < nLevels; level++) {
-    levelMax = levelMax/2;
+    levelMax = levelMax / 2;
     for (int i = 0; i < levelMax; i++) {
-      nDescendants[i + nextpow2 * level] = nDescendants[ 2 * i + nextpow2 * (level - 1)] +
-                                           nDescendants[ 2 * i + 1 + nextpow2 * (level - 1)];
-      LiMatrix[i + nextpow2 * level] = LiMatrix[2 * i + nextpow2 * (level - 1)] +
-                                       LiMatrix[ 2 * i + 1 + nextpow2 * (level - 1)];
-      unCoveredMatrix[i + nextpow2 * level] = unCoveredMatrix[2 * i + nextpow2 * (level - 1)] +
-                                              unCoveredMatrix[2 * i + 1 + nextpow2 * (level - 1)];
+      nDescendants[i + nextpow2 * level] =
+          nDescendants[2 * i + nextpow2 * (level - 1)] +
+          nDescendants[2 * i + 1 + nextpow2 * (level - 1)];
+      LiMatrix[i + nextpow2 * level] =
+          LiMatrix[2 * i + nextpow2 * (level - 1)] +
+          LiMatrix[2 * i + 1 + nextpow2 * (level - 1)];
+      unCoveredMatrix[i + nextpow2 * level] =
+          unCoveredMatrix[2 * i + nextpow2 * (level - 1)] +
+          unCoveredMatrix[2 * i + 1 + nextpow2 * (level - 1)];
     }
   }
   /* Training parameters */
@@ -81,16 +86,16 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   double *d = trainer->d;
   /* Monitoring */
   int monitor = trainer->monitor;
-  double * monitor_w = trainer->monitor_w;
+  double *monitor_w = trainer->monitor_w;
   /* Convergence diagnostic */
-  int * iter_count = &trainer->iter_count;
-  int * convergence_code = &trainer->convergence_code;
+  int *iter_count = &trainer->iter_count;
+  int *convergence_code = &trainer->convergence_code;
   /* Training */
-  _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples,
-                covered, unCoveredMatrix, LiMatrix, nDescendants, nCovered,
-                Lmean, nLevels, nextpow2, maxIter, lambda, alpha, precision,
-                tol, loss_function, grad_fun, sparse, jc, ir, lastVisited,
-                cumSum, d, g, monitor, monitor_w, iter_count, convergence_code);
+  _sag_adaptive(w, Xt, y, Li, Lmax, increasing, nVars, nSamples, covered,
+                unCoveredMatrix, LiMatrix, nDescendants, nCovered, Lmean,
+                nLevels, nextpow2, maxIter, lambda, alpha, precision, tol,
+                loss_function, grad_fun, sparse, jc, ir, lastVisited, cumSum, d,
+                g, monitor, monitor_w, iter_count, convergence_code);
   /* Deallocating */
   if (sparse) {
     Free(lastVisited);
@@ -100,17 +105,22 @@ void sag_adaptive(GlmTrainer *trainer, GlmModel *model, Dataset *dataset) {
   Free(unCoveredMatrix);
   Free(LiMatrix);
 }
-
-void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
-                   int increasing, int nVars, int nSamples,
-                   int *covered, double *unCoveredMatrix, double *LiMatrix,
-                   double *nDescendants, double *nCovered, double *Lmean,
-                   int nLevels, int nextpow2, int maxIter, double lambda,
-                   double alpha, double precision, double tol,
-                   loss_fun loss_function, loss_grad_fun grad_fun, int sparse,
-                   int *jc, int *ir, int *lastVisited, double *cumSum,
-                   double *d, double *g, int monitor, double * monitor_w,
-                   int * iter_count, int * convergence_code) {
+void _sag_adaptive(double *restrict w, const double *restrict Xt,
+                   const double *restrict y, double *restrict Li,
+                   double *restrict Lmax, const int increasing, const int nVars,
+                   const int nSamples, int *restrict covered,
+                   double *restrict unCoveredMatrix, double *restrict LiMatrix,
+                   double *restrict nDescendants, double *restrict nCovered,
+                   double *restrict Lmean, const int nLevels,
+                   const int nextpow2, const int maxIter, const double lambda,
+                   double alpha, const double precision, const double tol,
+                   const loss_fun loss_function, const loss_grad_fun grad_fun,
+                   const int sparse, const int *restrict jc,
+                   const int *restrict ir, int *restrict lastVisited,
+                   double *restrict cumSum, double *restrict d,
+                   double *restrict g, const int monitor,
+                   double *restrict monitor_w, int *restrict iter_count,
+                   int *restrict convergence_code) {
 
   GetRNGstate();
   /* Training variables*/
@@ -129,9 +139,10 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
   int k = 0; // TODO(Ishmael): Consider using the register keyword
   /* Monitoring */
   int pass_num = 0; // For weights monitoring
-  if (monitor  && k % nSamples == 0) {
+  if (monitor && k % nSamples == 0) {
     if (DEBUG) {
-      if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
+      if (DEBUG)
+        R_TRACE("effective pass # %d. saving weights.", pass_num);
     }
     F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
   }
@@ -304,28 +315,32 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
       *Lmax *= pow(2.0, -1.0 / nSamples);
 
     // if (i % nSamples == 0 && DEBUG) {
-    //  if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y, w, lambda, nSamples, nVars));
+    //  if (DEBUG) R_TRACE("pass %d: cost=%f", k/nSamples, binomial_cost(Xt, y,
+    //  w, lambda, nSamples, nVars));
     // }
 
     /* Incrementing iteration count */
     k++;
     /* Checking Stopping criterions */
     if (!sparse) {
-    agrad_norm = get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
+      agrad_norm =
+          get_cost_agrad_norm(w, d, lambda, *nCovered, nSamples, nVars);
     }
     stop_condition = (k >= maxIter) || (agrad_norm <= tol);
     /* Monitoring */
-    if ( monitor && k % nSamples == 0) {
+    if (monitor && k % nSamples == 0) {
       pass_num++;
       if (DEBUG) {
-        if (DEBUG) R_TRACE("effective pass # %d. saving weights.", pass_num);
+        if (DEBUG)
+          R_TRACE("effective pass # %d. saving weights.", pass_num);
       }
       F77_CALL(dcopy)(&nVars, w, &one, &monitor_w[nVars * pass_num], &one);
     }
   }
 
   PutRNGstate();
-  if (DEBUG) R_TRACE("Final approxite gradient norm: %F", agrad_norm);
+  if (DEBUG)
+    R_TRACE("Final approxite gradient norm: %F", agrad_norm);
   /* Setting final iteration count */
   *iter_count = k;
   /* Checking Convergence condition */
@@ -333,7 +348,8 @@ void _sag_adaptive(double *w, double *Xt, double *y, double *Li, double *Lmax,
     *convergence_code = 1;
   } else {
     *convergence_code = 0;
-    warning("Optimisation stopped before convergence. Try incrasing maximum number of iterations");
+    warning("Optimisation stopped before convergence. Try incrasing maximum "
+            "number of iterations");
   }
 
   if (sparse) {
