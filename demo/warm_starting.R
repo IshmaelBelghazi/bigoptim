@@ -23,8 +23,6 @@ lambdas <- glmnet_fits$lambda
 ## Fitting with stochastic average gradient descent with warm starting ----------
 sag_fits_warm <- sag(X, y, lambdas=lambdas, maxiter=maxiter,
                      tol=tol, family=family, fit_alg="constant")
-sag_fit <- sag(X, y, lambda=lambdas[10], maxiter=maxiter,
-                     tol=tol, family=family, fit_alg="constant")
 ## Getting costs ----------------------------------------------------------------
 costs <- get_cost(sag_fits_warm, X, y)
 print(get_cost(sag_fit, X, y))

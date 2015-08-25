@@ -24,7 +24,7 @@
 sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     d=NULL, g=NULL, covered=NULL, standardize=FALSE,
-                    tol=1e-7, family="binomial", fit_alg="constant",
+                    tol=1e-3, family="binomial", fit_alg="constant",
                     monitor=FALSE, ...) {
 
   ## Checking  for sparsity
@@ -147,10 +147,10 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
 sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                 stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                 d=NULL, g=NULL, covered=NULL, standardize=FALSE,
-                tol=1e-7, family="binomial", fit_alg="constant",
+                tol=1e-3, family="binomial", fit_alg="constant",
                 ...) {
 
-  lambdas <- sort(lambdas, decreasing=FALSE)
+  lambdas <- sort(lambdas, decreasing=TRUE)
   ## Checking  for sparsity
   sparse <- is.sparse(X)
   ##,-------------------
