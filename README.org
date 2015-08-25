@@ -1,7 +1,7 @@
 #+TITLE: BigOptim -- Large Scale Finite Sums Cost functions Optimization for R
 
 [[https://travis-ci.org/IshmaelBelghazi/bigpoptim][https://travis-ci.org/IshmaelBelghazi/bigoptim.svg]]
-
+[[https://coveralls.io/github/IshmaelBelghazi/bigoptim?branch=master][https://coveralls.io/repos/IshmaelBelghazi/bigoptim/badge.svg?branch=master&service=github]]
 * Description
 BigOptim is an R package that implements the Stochastic Average Gradient(SAG)[1] optimization method. For strongly convex problems, SAG achieves batch gradient descent convergence rates while keeping the iteration complexity of stochastic gradient descent. This allows for efficient training of machine learning algorithms with convex cost functions.
 * Setup
