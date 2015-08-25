@@ -17,7 +17,7 @@ coef.SAG_fit <- function(object, ...) object$w
 ##' @param ... Any other pass-through parameters 
 ##' @export
 coef.SAG <- function(object, ...) {
-  weights <- object$lambda_w
+  weights <- t(object$lambda_w)
   rownames(weights) <- paste("lambda=", object$input$lambdas)
   weights
 }
@@ -97,7 +97,7 @@ get_cost.SAG <- function(object, X, y, ...) {
            .binomial_cost_grad(X=X, y=y, w=w,
                                lambda=lambda,
                                backend=backend)
-         },
+         }, 
          gaussian={
            .gaussian_cost_grad(X=X, y=y, w=w,
                                lambda=lambda,

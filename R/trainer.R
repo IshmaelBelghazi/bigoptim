@@ -150,7 +150,7 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                 tol=1e-7, family="binomial", fit_alg="constant",
                 ...) {
 
-  lambdas <- sort(lambdas, decreasing=TRUE)
+  lambdas <- sort(lambdas, decreasing=FALSE)
   ## Checking  for sparsity
   sparse <- is.sparse(X)
   ##,-------------------

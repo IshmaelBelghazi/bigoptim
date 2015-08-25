@@ -13,7 +13,7 @@ p <- NCOL(X)
 n_passes <- 50  ## number of passses trough the dataset
 maxiter <- n * n_passes
 lambda <- 1/n 
-tol <- 1e-6
+tol <- 1e-3
 family <- "binomial"
 ## Fitting with glmnet ---------------------------------------------------------
 glmnet_fits <- glmnet(X, y, family=family, nlambda=10,
@@ -22,9 +22,12 @@ glmnet_fits <- glmnet(X, y, family=family, nlambda=10,
 lambdas <- glmnet_fits$lambda
 ## Fitting with stochastic average gradient descent with warm starting ----------
 sag_fits_warm <- sag(X, y, lambdas=lambdas, maxiter=maxiter,
-                     tol=tol, family=family, fit_alg="linesearch")
+                     tol=tol, family=family, fit_alg="constant")
+sag_fit <- sag(X, y, lambda=lambdas[10], maxiter=maxiter,
+                     tol=tol, family=family, fit_alg="constant")
 ## Getting costs ----------------------------------------------------------------
 costs <- get_cost(sag_fits_warm, X, y)
+print(get_cost(sag_fit, X, y))
 print(costs)
 ## Getting Gradients ------------------------------------------------------------
 grads <- get_grad(sag_fits_warm, X, y)

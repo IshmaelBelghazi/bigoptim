@@ -62,7 +62,7 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   | Stochastic Average Gradient |
   \============================*/
   /* Initializing lambda/weights Matrix*/
-  SEXP lambda_w = PROTECT(allocMatrix(REALSXP, LENGTH(lambdas), train_set.nVars)); nprot++;
+  SEXP lambda_w = PROTECT(allocMatrix(REALSXP, train_set.nVars, LENGTH(lambdas))); nprot++;
   Memzero(REAL(lambda_w), LENGTH(lambdas) * train_set.nVars);
   /* Training */
   if (DEBUG) R_TRACE("Training ...");
@@ -80,7 +80,8 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   *INTEGER(iter_count) = trainer.iter_count;
   /* Assigning variables to SEXP list */
   SEXP results = PROTECT(allocVector(VECSXP, 8)); nprot++;
-  INC_APPLY(SEXP, SET_VECTOR_ELT, results, lambda_w, d, g, covered, Li, Lmax, convergence_code, iter_count); // in utils.h
+  INC_APPLY(SEXP, SET_VECTOR_ELT, results, lambda_w, d, g, covered,
+            Li, Lmax, convergence_code, iter_count); // in utils.h
   /* Creating SEXP for list names */
   SEXP results_names = PROTECT(allocVector(STRSXP, 8)); nprot++;
   INC_APPLY_SUB(char *, SET_STRING_ELT, mkChar, results_names, "lambda_w", "d", "g",
