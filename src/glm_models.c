@@ -1,4 +1,5 @@
 #include "glm_models.h"
+#include <x86intrin.h>
 
 const static int one = 1;
 
@@ -48,9 +49,10 @@ double glm_cost(const double *restrict Xt, const double *restrict y,
 
   double nll = 0; // Negative log likelihood
   double cost = 0;
-  // #pragma omp parallel for reduction(+ : nll)
+  double innerProd = 0;
+  #pragma omp parallel for private(innerProd) reduction(+ : nll)
   for (int i = 0; i < nSamples; i++) {
-    double innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
+    innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     nll += (*glm_loss)(y[i], innerProd);
   }
   cost = nll / (double)nSamples;
@@ -60,18 +62,17 @@ double glm_cost(const double *restrict Xt, const double *restrict y,
 /* Generic glm grad function */
 void glm_cost_grad(const double *restrict Xt, const double *restrict y,
                    const double *restrict w, const double lambda,
-                   const int nSamples, const int nVars, const loss_grad_fun glm_grad,
-                   double *restrict grad) {
-  // #pragma omp parallel for
+                   const int nSamples, const int nVars,
+                   const loss_grad_fun glm_grad, double *restrict grad) {
   for (int i = 0; i < nSamples; i++) {
     double innerProd = F77_CALL(ddot)(&nVars, w, &one, &Xt[nVars * i], &one);
     double innerProd_grad = (*glm_grad)(y[i], innerProd);
     F77_CALL(daxpy)(&nVars, &innerProd_grad, &Xt[nVars * i], &one, grad, &one);
   }
-  // Dividing each entry by nSamples
+  /* Dividing each entry by nSamples */
   double averaging_factor = 1 / (double)nSamples;
   F77_CALL(dscal)(&nVars, &averaging_factor, grad, &one);
-  // Adding regularization
+  /* Adding regularization */
   F77_CALL(daxpy)(&nVars, &lambda, w, &one, grad, &one);
 }
 

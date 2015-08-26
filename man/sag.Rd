@@ -7,7 +7,7 @@
 sag(X, y, lambdas, maxiter = NULL, w = NULL, alpha = NULL,
   stepSizeType = 1, Li = NULL, Lmax = NULL, increasing = TRUE,
   d = NULL, g = NULL, covered = NULL, standardize = FALSE,
-  tol = 1e-07, family = "binomial", fit_alg = "constant", ...)
+  tol = 0.001, family = "binomial", fit_alg = "constant", ...)
 }
 \arguments{
 \item{X}{Matrix, possibly sparse of features.}
