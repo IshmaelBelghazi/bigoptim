@@ -41,6 +41,7 @@
 /* Prototypes */
 double _log_sum_exp(const double * restrict array, const int ar_size);
 double log2(double x);
+SEXP getListElement(SEXP list, const char *str);
 double get_cost_agrad_norm(const double* restrict w, const double* restrict d, const double lambda,
                            const double nCovered, const int nSamples, const int nVars);
 #endif /* UTILS_H_ */

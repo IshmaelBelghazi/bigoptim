@@ -46,4 +46,3 @@ SEXP initialize_monitor(SEXP monitor, SEXP maxIter, SEXP Xt) {
   UNPROTECT(1);
   return monitor_w;
 }
-/* Make return list */

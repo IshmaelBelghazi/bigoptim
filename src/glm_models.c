@@ -1,13 +1,10 @@
 #include "glm_models.h"
-#include <x86intrin.h>
 
 const static int one = 1;
-
 /*=============\
 | inititalizer |
 \=============*/
-
-GlmModel make_GlmModel(SEXP w, SEXP family) {
+GlmModel make_GlmModel(SEXP w, SEXP family, SEXP ex_model_params) {
 
   GlmModel model = {.w = REAL(w)};
   GlmType model_type = *INTEGER(family);
@@ -30,14 +27,27 @@ GlmModel make_GlmModel(SEXP w, SEXP family) {
     model.loss = poisson_loss;
     model.grad = poisson_loss_grad;
     break;
+  case C_SHARED:
+    ;; // Empty statement. Labels can only be followed by statements and
+       // declarations are not statements.
+    const char * shared_path = STRING_VALUE((getListElement(ex_model_params,
+                                                            "shared_lib_path")));
+    const char * loss_symbol = STRING_VALUE(getListElement(ex_model_params,
+                                                                "loss_function_name"));
+    const char * loss_grad_symbol = STRING_VALUE(getListElement(ex_model_params,
+                                                                     "grad_function_name"));
+    model.dyn_shlib_container = load_C_shared_model(shared_path,
+                                                    loss_symbol,
+                                                    loss_grad_symbol);
+    model.loss = model.dyn_shlib_container.dyn_loss_fun;
+    model.grad = model.dyn_shlib_container.dyn_loss_grad_fun;
+    break;
   default:
     error("Unrecognized glm family");
     break;
   }
-
   return model;
 }
-
 /*=========\
 | GENERICS |
 \=========*/

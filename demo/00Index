@@ -1,5 +1,6 @@
-monitoring_training monitoring_training Convergence monitoring and comparison against glmnet
-warm_starting       warm_starting       Fitting a sequence of models using warm starting
-example_SAG         example_SAG         Replication of Mark's Matlab example file
-example_SAG2        example_SAG2        Replication of Mark's Matlab example file
-run_times           tun_rimes           Run times test
+monitoring_training            monitoring_training             Convergence monitoring and comparison against glmnet
+warm_starting                  warm_starting                   Fitting a sequence of models using warm starting
+example_SAG                    example_SAG                     Replication of Mark's Matlab example file
+example_SAG2                   example_SAG2                    Replication of Mark's Matlab example file
+run_times                      run_rimes                       Run times test
+user_supplied_C_loss_functions user_supplied_C_loss_functions  User supplied C loss functions examples.

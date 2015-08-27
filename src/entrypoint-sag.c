@@ -56,7 +56,7 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   if (DEBUG) R_TRACE("Trainer initialized");
   /* Initializing Model */
   if (DEBUG) R_TRACE("Initializing model");
-  GlmModel model = make_GlmModel(w, family);
+  GlmModel model = make_GlmModel(w, family, R_NilValue);
   if (DEBUG) R_TRACE("Model initialized");
   /*============================\
   | Stochastic Average Gradient |

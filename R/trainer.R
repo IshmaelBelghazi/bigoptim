@@ -25,7 +25,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                     stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                     d=NULL, g=NULL, covered=NULL, standardize=FALSE,
                     tol=1e-3, family="binomial", fit_alg="constant",
-                    monitor=FALSE, ...) {
+                    monitor=FALSE, user_loss_function=NULL, ...) {
 
   ## Checking  for sparsity
   sparse <- is.sparse(X)
@@ -59,6 +59,20 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
     covered <- matrix(0L, nrow=NROW(X), ncol=1)
   }
 
+  if ( family == "c_shared") {
+    if (length(user_loss_function$shared_lib_path) == 0) {
+      stop("unspecified shared lib file path")
+    } else {
+      if (!file.exists(user_loss_function$shared_lib_path))
+        stop("misspecified shared lib file path.")
+    }
+    
+    if (length(user_loss_function$loss_function_name) == 0) 
+      stop("unspecified loss function name")
+    if (length(user_loss_function$grad_function_name) == 0) {
+      stop("unspecified grad function name")
+    }
+ } 
   ##,-----------------
   ##| Setting model id 
   ##`-----------------
@@ -67,7 +81,9 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                       binomial=1,
                       exponential=2,
                       poisson=3,
+                      c_shared=4,
                       stop("unrecognized model"))
+ 
   ##,-------------------
   ##| Setting fit_alg id 
   ##`-------------------
@@ -111,6 +127,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                    as.integer(maxiter),
                    as.integer(family_id),
                    as.integer(fit_alg_id),
+                   user_loss_function,
                    as.integer(sparse),
                    as.integer(monitor))
 
@@ -190,6 +207,7 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                       binomial=1,
                       exponential=2,
                       poisson=3,
+                      c_shared=4,
                       stop("unrecognized model"))
   ##,-------------------
   ##| Setting fit_alg id 
