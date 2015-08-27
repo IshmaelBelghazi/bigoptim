@@ -25,7 +25,6 @@ sag_fits_warm <- sag(X, y, lambdas=lambdas, maxiter=maxiter,
                      tol=tol, family=family, fit_alg="constant")
 ## Getting costs ----------------------------------------------------------------
 costs <- get_cost(sag_fits_warm, X, y)
-print(get_cost(sag_fit, X, y))
 print(costs)
 ## Getting Gradients ------------------------------------------------------------
 grads <- get_grad(sag_fits_warm, X, y)

@@ -6,11 +6,11 @@ const static int one = 1;
 \=============*/
 GlmModel make_GlmModel(SEXP w, SEXP family, SEXP ex_model_params) {
 
-  GlmModel model = {.w = REAL(w)};
-  GlmType model_type = *INTEGER(family);
+  GlmModel model = {.w = REAL(w),
+                    .model_type = *INTEGER(family)};
 
   /* Choosing family */
-  switch (model_type) {
+  switch (model.model_type) {
   case GAUSSIAN:
     model.loss = gaussian_loss;
     model.grad = gaussian_loss_grad;

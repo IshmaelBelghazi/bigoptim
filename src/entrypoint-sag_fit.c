@@ -76,7 +76,8 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   train(&trainer, &model, &train_set);
   if (DEBUG) R_TRACE("... Training finished");
   /* Clean up */
-  // TODO(Ishmael): Add dynamically loaded shared lib functions cleanup  -- dlclose
+  cleanup(&trainer, &model, &train_set);
+  // TODO(Ishmael): Add dynamically loaded shared lib functions cleanup  -- dlcloseaaaaa
   /*=======\
   | Return |
   \=======*/

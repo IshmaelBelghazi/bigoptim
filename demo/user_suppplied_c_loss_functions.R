@@ -12,7 +12,6 @@ p <- NCOL(X)
 maxiter <- n * 10  ## 10 passes throught the dataset
 lambda <- 1/n 
 tol <- 0
-
 ## -----------------------------------------------------------------------------
 ## SAG binomial with Constant step size
 print("Running Stochastic Average Gradient with constant step size")

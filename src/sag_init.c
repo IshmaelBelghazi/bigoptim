@@ -25,7 +25,7 @@ static R_CallMethodDef CallEntries[] = {
   /* SAG fit*/
   CALLDEF(C_sag_fit, 19),
   /* SAG with warm-starting */
-  CALLDEF(C_sag, 17),
+  CALLDEF(C_sag, 18),
   {NULL, NULL, 0}
 };
 

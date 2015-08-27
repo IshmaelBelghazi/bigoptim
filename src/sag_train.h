@@ -11,5 +11,5 @@
 
 void train(GlmTrainer* trainer, GlmModel* model, Dataset* dataset);
 SEXP make_return_list(GlmTrainer* trainer, GlmModel* model, Dataset* dataset);
-
+void cleanup(GlmTrainer* trainer, GlmModel* model, Dataset* dataset);
 #endif /* SAG_TRAIN_H_*/

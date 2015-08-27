@@ -35,10 +35,15 @@ void train(GlmTrainer* trainer, GlmModel* model, Dataset* dataset) {
 }
 /* Return List */
 /* Make return list */
-
 SEXP make_return_list(GlmTrainer* trainer, GlmModel* model, Dataset* dataset) {
 
-
-
 }
-
+/* Cleanup */
+void cleanup(GlmTrainer* trainer, GlmModel* model, Dataset* dataset) {
+  /* Dynamic loading cleanup */
+  if (model->model_type == C_SHARED) {
+    if (!model->dyn_shlib_container.handle) {
+      dlclose(model->dyn_shlib_container.handle);
+    }
+  }
+}
