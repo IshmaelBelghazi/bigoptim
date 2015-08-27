@@ -12,15 +12,15 @@ dyn_fun_container load_C_shared_model(const char * filename,
   dyn_fun_container container;
   /* Opening passed shared object */
   /* Opening passed shared object */
-  handle = dlopen(filename, RTLD_NOW);
-  CHK_DL_OPEN(handle);
-
+  CHK_DL_OPEN(handle = dlopen(filename, RTLD_NOW));
   /* Assigning loss function */
-  container.dyn_loss_fun = (loss_fun) dlsym(handle, loss_symbol);
-  CHK_DL_LOAD(container.dyn_loss_fun);
+  dlerror();  /* Clearing previous error */
+  //container.dyn_loss_fun = (loss_fun) dlsym(handle, loss_symbol);
+  //void * dyn_loss = dlsym(handle, loss_symbol);
+  CHK_DL_LOAD(container.dyn_loss_fun = (loss_fun) dlsym(handle, loss_symbol));
   /* Assigning Gradient function */
-  container.dyn_loss_grad_fun = (loss_grad_fun) dlsym(handle, grad_symbol);
-  CHK_DL_LOAD(container.dyn_loss_grad_fun);
+  dlerror();  /* Clearing previous error */
+  CHK_DL_LOAD(container.dyn_loss_grad_fun = (loss_grad_fun) dlsym(handle, grad_symbol));
   /* Assigning shared library handle */
   container.handle = handle;
 

@@ -12,16 +12,16 @@ typedef struct dyn_fun_container {
 
 /* Error Handling Macros  */
 /* Check dynamic library opening */
-#define CHK_DL_OPEN( x )                               \
-  if (!( x )) {                                        \
-    error("Dynamic library operning error @ %s, %s :", \
-          __FILE__, __LINE__, dlerror());              \
+#define CHK_DL_OPEN( x )                                    \
+dlerror();                                                  \
+  if (!( x )) {                                             \
+    error("Dynamic library operning error, %s", dlerror()); \
   }
 /* Check dynamic library loading */
-#define CHK_DL_LOAD( x )                              \
-  if (( x ) == NULL) {                                \
-    error("Dynamic library loading error @ %s, %s :", \
-          __FILE__, __LINE__, dlerror());             \
+#define CHK_DL_LOAD( x )                                         \
+  dlerror();                                                     \
+  if (!( x )) {                                                  \
+    error("Dynamic library loading error: %s", dlerror());       \
 }
 /* Load model function pointers from dynamically shared object */
 dyn_fun_container load_C_shared_model(const char * filename,
