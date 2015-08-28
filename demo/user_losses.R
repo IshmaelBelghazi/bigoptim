@@ -39,5 +39,6 @@ sag_constant_fit <- sag_fit(X=X, y=y, lambda=lambda, maxiter=maxiter,
                             tol=tol, family="c_shared",
                             user_loss_function=user_c_binomial,
                             fit_alg="constant", standardize=FALSE)
-cost_constant <- .get_cost(X, y, sag_constant_fit$w, lambda, "binomial", backend="C")
+cost_constant <- .get_cost(X, y, sag_constant_fit$w, lambda, "binomial",
+                           backend="C")
 print(sprintf("Cost is: %f. ", cost_constant))
