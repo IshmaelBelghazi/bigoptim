@@ -60,16 +60,16 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
   }
 
   if ( family == "c_shared") {
-    if (length(user_loss_function$shared_lib_path) == 0) {
+    if (length(user_loss_function$lib_file_path) == 0) {
       stop("unspecified shared lib file path")
     } else {
-      if (!file.exists(user_loss_function$shared_lib_path))
+      if (!file.exists(user_loss_function$lib_file_path))
         stop("misspecified shared lib file path.")
     }
     
-    if (length(user_loss_function$loss_function_name) == 0) 
+    if (length(user_loss_function$loss_name) == 0) 
       stop("unspecified loss function name")
-    if (length(user_loss_function$grad_function_name) == 0) {
+    if (length(user_loss_function$grad_name) == 0) {
       stop("unspecified grad function name")
     }
  } 

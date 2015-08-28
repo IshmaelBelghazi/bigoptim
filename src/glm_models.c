@@ -31,11 +31,11 @@ GlmModel make_GlmModel(SEXP w, SEXP family, SEXP ex_model_params) {
     ;; // Empty statement. Labels can only be followed by statements and
        // declarations are not statements.
     const char * shared_path = STRING_VALUE((getListElement(ex_model_params,
-                                                            "shared_lib_path")));
+                                                            "lib_file_path")));
     const char * loss_symbol = STRING_VALUE(getListElement(ex_model_params,
-                                                                "loss_function_name"));
+                                                                "loss_name"));
     const char * loss_grad_symbol = STRING_VALUE(getListElement(ex_model_params,
-                                                                     "grad_function_name"));
+                                                                     "grad_name"));
     model.dyn_shlib_container = load_C_shared_model(shared_path,
                                                     loss_symbol,
                                                     loss_grad_symbol);
