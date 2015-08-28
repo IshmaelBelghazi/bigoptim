@@ -1,13 +1,11 @@
 library(devtools)
 library(microbenchmark)
 load_all()
-
-
 ## Cost functions Benchmarks ---------------------------------------------------
 true_params <- rnorm(n=100)
 lambda <- runif(1,min=0, max=10)
 sample_size <- 10000
-sims <- lapply(list(binomial=.simulate_binomial,
+sims <- lapply(list(inomial=.simulate_binomial,
                     gaussian=.simulate_gaussian,
                     exponential=.simulate_exponential,
                     poisson=.simulate_poisson),

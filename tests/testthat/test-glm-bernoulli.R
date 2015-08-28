@@ -25,12 +25,12 @@ algs <- list(constant="constant",
              adaptive="adaptive")
 ## Data
 ## Empirical data
-data(mini.covtype.libsvm)
+data(covtype.libsvm)
 
 empr_data <- list()
-empr_data$y <- matrix(mini.covtype.libsvm$y, nrow=NROW(mini.covtype.libsvm$y), ncol=1)
+empr_data$y <- matrix(covtype.libsvm$y, nrow=NROW(covtype.libsvm$y), ncol=1)
 empr_data$y[empr_data$y == 2] <- -1
-empr_data$X <- cbind(rep(1, NROW(mini.covtype.libsvm$X)), mini.covtype.libsvm$X)
+empr_data$X <- cbind(rep(1, NROW(covtype.libsvm$X)), covtype.libsvm$X)
 sample_size <- NROW(empr_data$X)
 ## Test parmeters
 eps <- 1e-02

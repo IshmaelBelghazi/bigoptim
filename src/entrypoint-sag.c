@@ -24,7 +24,9 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
            SEXP increasing,  // SAG Adaptive
            SEXP dInit, SEXP gInit, SEXP coveredInit,
            SEXP tol, SEXP maxiter,
-           SEXP family, SEXP fit_alg,
+           SEXP family,
+           SEXP fit_alg,
+           SEXP ex_model_params,
            SEXP sparse) {
  /*===============\
  | Error Checking |
@@ -56,7 +58,7 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   if (DEBUG) R_TRACE("Trainer initialized");
   /* Initializing Model */
   if (DEBUG) R_TRACE("Initializing model");
-  GlmModel model = make_GlmModel(w, family);
+  GlmModel model = make_GlmModel(w, family, ex_model_params);
   if (DEBUG) R_TRACE("Model initialized");
   /*============================\
   | Stochastic Average Gradient |
@@ -70,6 +72,8 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
   sag_warm(&trainer, &model, &train_set,
            REAL(lambdas), LENGTH(lambdas), REAL(lambda_w));
   if (DEBUG) R_TRACE("... Training finished");
+  /* Cleanup */
+  cleanup(&trainer, &model, &train_set);
   /*=======\
   | Return |
   \=======*/
@@ -88,7 +92,6 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
                 "covered", "Li", "Lmax", "convergence_code", "iter_count");
   setAttrib(results, R_NamesSymbol, results_names);
   if (DEBUG) R_TRACE("Return S-EXP all set up");
-
   /* ------------------------------------------------------------------------ */
   UNPROTECT(nprot);
   return results;

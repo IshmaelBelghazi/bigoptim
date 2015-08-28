@@ -14,7 +14,9 @@ SEXP C_sag(SEXP wInit, SEXP Xt, SEXP y, SEXP lambdas,
            SEXP increasing,  // SAG Adaptive
            SEXP dInit, SEXP gInit, SEXP coveredInit,
            SEXP tol, SEXP maxiter,
-           SEXP family, SEXP fit_alg,
+           SEXP family,
+           SEXP fit_alg,
+           SEXP ex_model_params,
            SEXP sparse);
 
 #endif  /* ENTRYPOINT_SAG_H_*/

@@ -26,7 +26,6 @@ cost_grad_const <- get_grad(sag_constant_fit, X, y)
 cost_grad_const_norm <- norm(cost_grad_const, 'F')
 print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
               cost_grad_const_norm))
-
 ## -----------------------------------------------------------------------------
 ## SAG with linesearch
 print("Running Stochastic Average Gradient with line-search")
@@ -43,7 +42,6 @@ cost_grad_ls <- get_grad(sag_ls_fit, X=X, y=y)
 cost_grad_ls_norm <- norm(cost_grad_ls, 'F')
 print(sprintf("Gradient norm: %f. Value in Mark's matlab code: 0.001394",
               cost_grad_ls_norm))
-
 ## -----------------------------------------------------------------------------
 ## SAG with linesearch and adaptive sampling
 print(paste0("Running Stochastic Average Gradient with ",

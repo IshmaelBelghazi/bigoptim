@@ -36,7 +36,17 @@ double _log_sum_exp(const double * restrict array, const int ar_size) {
 double log2(double x) {
   return log(x)/log(2);
 }
-
+/* Gets element of list (Writing R extensions  5.9.6) */
+/* get the list element named str, or return NULL */
+SEXP getListElement(SEXP list, const char *str) {
+  SEXP elmt = R_NilValue, names = getAttrib(list, R_NamesSymbol);
+  for (int i = 0; i < length(list); i++)
+    if(strcmp(CHAR(STRING_ELT(names, i)), str) == 0) {
+      elmt = VECTOR_ELT(list, i);
+      break;
+    }
+  return elmt;
+}
 /* computes cost function's approximate gradient norm */
 double get_cost_agrad_norm(const double* restrict w, const double* restrict d, const double lambda,
                           const double nCovered, const int nSamples, const int nVars) {

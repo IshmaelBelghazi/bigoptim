@@ -23,9 +23,9 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(C_poisson_cost, 4),
   CALLDEF(C_poisson_cost_grad, 4),
   /* SAG fit*/
-  CALLDEF(C_sag_fit, 18),
+  CALLDEF(C_sag_fit, 19),
   /* SAG with warm-starting */
-  CALLDEF(C_sag, 17),
+  CALLDEF(C_sag, 18),
   {NULL, NULL, 0}
 };
 

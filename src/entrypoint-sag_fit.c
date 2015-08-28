@@ -16,6 +16,7 @@
  *     use 2/(L + n*myu)
  *     @return optimal weights (p, 1)
  */
+
 SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                SEXP alpha,  // SAG Constant Step size
                SEXP stepSizeType, // SAG Linesearch
@@ -24,8 +25,13 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
                SEXP increasing,  // SAG Adaptive
                SEXP dInit, SEXP gInit, SEXP coveredInit,
                SEXP tol, SEXP maxiter,
-               SEXP family, SEXP fit_alg,
-               SEXP sparse, SEXP monitor) {
+               SEXP family,
+               SEXP fit_alg,
+               SEXP ex_model_params,  // Parameters for external model functions
+                                      // (external C shared, dynamically
+                                      // compiled, and R callbacks)
+               SEXP sparse,
+               SEXP monitor) {
   /*===============\
   | Error Checking |
   \===============*/
@@ -60,7 +66,7 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   if (DEBUG) R_TRACE("Trainer initialized");
   /* Initializing Model */
   if (DEBUG) R_TRACE("Initializing model");
-  GlmModel model = make_GlmModel(w, family);
+  GlmModel model = make_GlmModel(w, family, ex_model_params);
   if (DEBUG) R_TRACE("Model initialized");
   /*============================\
   | Stochastic Average Gradient |
@@ -69,6 +75,9 @@ SEXP C_sag_fit(SEXP wInit, SEXP Xt, SEXP y, SEXP lambda,
   if (DEBUG) R_TRACE("Training ...");
   train(&trainer, &model, &train_set);
   if (DEBUG) R_TRACE("... Training finished");
+  /* Clean up */
+  cleanup(&trainer, &model, &train_set);
+  // TODO(Ishmael): Add dynamically loaded shared lib functions cleanup  -- dlcloseaaaaa
   /*=======\
   | Return |
   \=======*/

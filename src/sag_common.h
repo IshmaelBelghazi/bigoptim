@@ -14,8 +14,12 @@
 
 /* DEBUG */
 #ifndef DEBUG
-#define DEBUG 0  // Enable/diasble traces.
+#define DEBUG 1  // Enable/diasble traces.
 #endif
+/*  Types                 */
+/* Loss functions pointer */
+typedef double (*loss_fun)(double, double);
+typedef double (*loss_grad_fun)(double, double);
 /* Constant */
 const static double precision = 1.490116119384765625e-8;
 /* trainer type enum */
