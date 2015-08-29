@@ -25,7 +25,6 @@ Dataset make_Dataset(SEXP Xt, SEXP y, SEXP covered, SEXP Lmax,
     error("Unrecognied fit algorithm");
     break;
   }
-
   /* Initializing sample*/
   CHM_SP cXt;
   if (data_set.sparse) {

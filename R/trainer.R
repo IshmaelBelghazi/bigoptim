@@ -82,6 +82,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
                       exponential=2,
                       poisson=3,
                       c_shared=4,
+                      R=5,
                       stop("unrecognized model"))
  
   ##,-------------------
