@@ -44,11 +44,11 @@ demo("monitoring_training")
 [[misc/readme/grad_norm_covtype.png]]
 * Runtime comparison
 Ran on intel i7 4710HQ 16G with intel MKL and compilers.
-#+:BEGIN_SRC R
+#+BEGIN_SRC R
 demo("run_times")
 #+END_SRC R
 ** Dense dataset: Logistic regression on covertype
-#+CAPTION: Logistic Regression on Covertype -- 581012 sample points, 55 variables
+*Logistic Regression on Covertype -- 581012 sample points, 55 variables*
 |                                          | constant | linesearch | adaptive |   glmnet |
 |------------------------------------------+----------+------------+----------+----------|
 | Cost at optimum                          | 0.513603 |   0.513497 | 0.513676 | 0.513693 |
@@ -57,7 +57,7 @@ demo("run_times")
 | Time(seconds)                            |    1.930 |      2.392 |    8.057 |    8.749 |
 
 ** Sparse dataset: Logistic regression on rcv1_train
-#+CAPTION: Logistic Regression on RCV1_train -- 20242 sample points, 47237 variables
+*Logistic Regression on RCV1_train -- 20242 sample points, 47237 variables* 
 |                                         |     constant |   linesearch |     adaptive |       glmnet |
 |-----------------------------------------+--------------+--------------+--------------+--------------|
 | Cost at optimum                         |     0.046339 |     0.046339 |     0.046339 |     0.046342 |
