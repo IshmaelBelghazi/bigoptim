@@ -1,3 +1,7 @@
+##' @title Make user supplied C loss and gradient
+##' @param src C source code as character string
+##' @param loss_name Loss function name
+##' @param grad_name Gradient function name
 ##' @export
 make_c_loss <- function(src, loss_name, grad_name) {
   if (.Platform$OS.type !=  "unix")
