@@ -9,9 +9,9 @@ p <- NCOL(X)
 ## Setting seed
 #set.seed(0)
 ## Setting up problem
-maxiter <- n * 10  ## 10 passes throught the dataset
+maxiter <- n * 20  ## 10 passes throught the dataset
 lambda <- 1/n 
-tol <- 0
+tol <- 1e-4
 
 ## -----------------------------------------------------------------------------
 ## SAG with Constant step size
