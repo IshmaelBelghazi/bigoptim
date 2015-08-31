@@ -37,10 +37,12 @@ eps <- 1e-02
 ## Training parameters
 tol <- 1e-03  ## Stop training when norm of approximate gradient is smaller than tol
 lambda <- 1/sample_size
+stepSizeType <- 1
 ## A. Empirical Data tests
 sag_empr_fits <- lapply(algs, function(alg) sag_fit(dataset$X, dataset$y,
                                                     lambda=lambda,
                                                     family=family,
+                                                    stepSizeType=stepSizeType,
                                                     standardize=FALSE,
                                                     tol=tol,
                                                     fit_alg=alg))
