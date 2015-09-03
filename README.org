@@ -26,7 +26,7 @@ maxiter <- NROW(X) * 10  ## 10 passes throught the dataset
 lambda <- 1/NROW(X) 
 sag_ls_fit <- sag_fit(X=X, y=y, lambda=lambda,
                       maxiter=maxiter, 
-                      tol=1e-08, 
+                      tol=1e-04, 
                       family="binomial", 
                       fit_alg="linesearch",
                       standardize=FALSE)
@@ -37,11 +37,34 @@ cost <- get_cost(sag_ls_fit)
 #+END_SRC
 * Example: Demo -- Monitoring gradient norm
 #+BEGIN_SRC R
-data("monitoring_training")
+demo("monitoring_training")
 #+END_SRC
 #+CAPTION: Gradient norm after each effective pass through the dataset
 #+NAME: gradien_monitoring
 [[misc/readme/grad_norm_covtype.png]]
+* Runtime comparison
+Ran on intel i7 4710HQ 16G with intel MKL and compilers.
+#+BEGIN_SRC R
+demo("run_times")
+#+END_SRC R
+** Dense dataset: Logistic regression on covertype
+*Logistic Regression on Covertype -- 581012 sample points, 55 variables*
+|                                          | constant | linesearch | adaptive |   glmnet |
+|------------------------------------------+----------+------------+----------+----------|
+| Cost at optimum                          | 0.513603 |   0.513497 | 0.513676 | 0.513693 |
+| Gradient L2 norm at optimum              | 0.001361 |   0.001120 | 0.007713 | 0.001806 |
+| Approximate gradient L2 norm  at optimum | 0.001794 |   0.000146 | 0.000214 |       NA |
+| Time(seconds)                            |    1.930 |      2.392 |    8.057 |    8.749 |
+
+** Sparse dataset: Logistic regression on rcv1_train
+*Logistic Regression on RCV1_train -- 20242 sample points, 47237 variables* 
+|                                         |     constant |   linesearch |     adaptive |       glmnet |
+|-----------------------------------------+--------------+--------------+--------------+--------------|
+| Cost at optimum                         |     0.046339 |     0.046339 |     0.046339 |     0.046342 |
+| Gradient L2 norm at optimum             | 3.892572e-07 | 4.858723e-07 | 6.668943e-10 | 7.592185e-06 |
+| Approximate gradient L2 norm at optimum | 3.318267e-07 | 4.800463e-07 | 2.647663e-10 |           NA |
+| Time(seconds)                           |        0.814 |        0.872 |        1.368 |        4.372 |
+
 * References
 
 [1] Mark Schmidt, Nicolas Le Roux, and Francis Bach. Minimizing Finite Sums with the Stochastic Average Gradient. arXiv:1309.2388 [cs, math, stat], September 2013. arXiv: 1309.2388. [ [[http://ishmaelbelghazi.bitbucket.org/SAG_proposal/proposal_IshmaelB_bib.html#schmidt_minimizing_2013][bib]] | [[http://arxiv.org/abs/1309.2388][http]] ] 

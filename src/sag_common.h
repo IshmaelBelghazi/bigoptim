@@ -15,7 +15,7 @@
 #include "shared.h"
 /* DEBUG   */
 #ifndef DEBUG
-#define DEBUG 1  // Enable/diasble traces.
+#define DEBUG 0  // Enable/diasble traces.
 #endif
 /*  Types                 */
 /* Loss functions pointer */

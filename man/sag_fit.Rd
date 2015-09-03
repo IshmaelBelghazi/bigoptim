@@ -47,6 +47,8 @@ sag_fit(X, y, lambda = 0, maxiter = NULL, w = NULL, alpha = NULL,
 
 \item{monitor}{Boolean. If TRUE returns matrix of weights after each effective pass through the dataset.}
 
+\item{user_loss_function}{User supplied R or C loss and gradient functions}
+
 \item{...}{Any other pass-through parameters.}
 }
 \value{

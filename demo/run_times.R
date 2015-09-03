@@ -21,7 +21,7 @@ time_fit <- function(X, y, lambda, maxiter, family, tol){
          approx_grad_norm=norm(get_approx_grad(fit), 'F'),
          time=fit_time[['elapsed']])
   })
-  print("processing glmnet")
+  print("processing: glmnet")
   glmnet_time <- system.time({
     glmnet_fit <- glmnet(X, as.factor(y), alpha=0, family="binomial",
                          lambda=lambda, standardize=FALSE, intercept=FALSE)
@@ -41,7 +41,7 @@ time_fit <- function(X, y, lambda, maxiter, family, tol){
                                   family=family, backend=backend), 'F')
   fits$glmnet <- list(cost=glm_cost,
                       grad_norm=glm_cost_grad,
-                      approx_grad_norm=NULL,
+                      approx_grad_norm=NA,
                       time=glmnet_time[['elapsed']])
   do.call(cbind, fits)
 }
@@ -64,7 +64,7 @@ print(fit_times_covtype)
 data(rcv1_train)
 X_rcv1_train <- rcv1_train$X
 y_rcv1_train <- rcv1_train$y
-maxiter <- NROW(X_covtype) * 5
+maxiter <- NROW(X_covtype) * 2
 lambda <- 1/NROW(X_covtype)
 tol <- 0
 print("Timing on rcv1_train ...")

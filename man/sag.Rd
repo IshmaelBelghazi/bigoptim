@@ -7,7 +7,8 @@
 sag(X, y, lambdas, maxiter = NULL, w = NULL, alpha = NULL,
   stepSizeType = 1, Li = NULL, Lmax = NULL, increasing = TRUE,
   d = NULL, g = NULL, covered = NULL, standardize = FALSE,
-  tol = 0.001, family = "binomial", fit_alg = "constant", ...)
+  tol = 0.001, family = "binomial", fit_alg = "constant",
+  user_loss_function = NULL, ...)
 }
 \arguments{
 \item{X}{Matrix, possibly sparse of features.}
@@ -43,6 +44,8 @@ sag(X, y, lambdas, maxiter = NULL, w = NULL, alpha = NULL,
 \item{family}{One of "binomial", "gaussian", "exponential" or "poisson"}
 
 \item{fit_alg}{One of "constant", "linesearch" (default), or "adaptive".}
+
+\item{user_loss_function}{User supplied R or C loss and gradient functions}
 
 \item{...}{Any other pass-through parameters.}
 }

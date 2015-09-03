@@ -46,6 +46,7 @@ coef.SAG <- function(object, ...) {
          },
          stop("unrocognized family"))
 }
+##' @export
 get_cost <- function(object, X, y, ...) {
   UseMethod('get_cost')
 }
@@ -115,6 +116,7 @@ get_cost.SAG <- function(object, X, y, ...) {
          },
          stop("unrecognized family"))
 }
+##' @export
 get_grad <- function(object, X, y, ...) {
   UseMethod('get_grad')
 }
@@ -158,9 +160,11 @@ get_grad.SAG <- function(object, X, y, ...) {
   grads
 }
 ## ** Approximate Gradient
+##' @export
 get_approx_grad <- function(object, ...) {
   UseMethod('get_approx_grad')
 }
+##' @export
 get_approx_grad.default <- function(object, ...) {
   stop("unrecognized object class")
 }

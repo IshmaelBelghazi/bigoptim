@@ -30,10 +30,10 @@ data(covtype.libsvm)
 empr_data <- list()
 empr_data$y <- matrix(covtype.libsvm$y, nrow=NROW(covtype.libsvm$y), ncol=1)
 empr_data$y[empr_data$y == 2] <- -1
-empr_data$X <- cbind(rep(1, NROW(covtype.libsvm$X)), covtype.libsvm$X)
+empr_data$X <- cbind(rep(1, NROW(covtype.libsvm$X)), scale(covtype.libsvm$X))
 sample_size <- NROW(empr_data$X)
 ## Test parmeters
-eps <- 1e-02
+eps <- 1e-01
 ## Training parameters
 tol <- 1e-4  ## Stop training when norm of approximate gradient is smaller than tol
 lambda <- 1/sample_size
@@ -70,8 +70,10 @@ test_that("True Gradient is small on empirical data", {
 
 ## B. Simulated Data tests
 ## Generating simulated data
+eps <- 1e-02
+tol <- 1e-8
 sample_size <- 3000
-maxiter <- sample_size * 10
+maxiter <- sample_size * 100
 true_params <- c(1:3)
 sim_data <- .simulate_binomial(true_params, sample_size=sample_size, intercept=FALSE)
 sim_data$X <- scale(sim_data$X)

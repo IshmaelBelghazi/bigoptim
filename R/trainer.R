@@ -17,6 +17,7 @@
 ##' @param family One of "binomial", "gaussian", "exponential" or "poisson"
 ##' @param fit_alg One of "constant", "linesearch" (default), or "adaptive"
 ##' @param monitor Boolean. If TRUE returns matrix of weights after each effective pass through the dataset.
+##' @param user_loss_function User supplied R or C loss and gradient functions 
 ##' @param ... Any other pass-through parameters.
 ##' @export
 ##' @return object of class SAG_fit
@@ -158,6 +159,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
 ##' @param tol Real. Miminal required approximate gradient norm before convergence.
 ##' @param family One of "binomial", "gaussian", "exponential" or "poisson"
 ##' @param fit_alg One of "constant", "linesearch" (default), or "adaptive". 
+##' @param user_loss_function User supplied R or C loss and gradient functions
 ##' @param ... Any other pass-through parameters.
 ##' @export
 ##' @return object of class SAG
@@ -165,7 +167,7 @@ sag_fit <- function(X, y, lambda=0, maxiter=NULL, w=NULL, alpha=NULL,
 sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                 stepSizeType=1, Li=NULL, Lmax=NULL, increasing=TRUE,
                 d=NULL, g=NULL, covered=NULL, standardize=FALSE,
-                tol=1e-3, family="binomial", fit_alg="constant",
+                tol=1e-3, family="binomial", fit_alg="constant", user_loss_function=NULL, 
                 ...) {
 
   lambdas <- sort(lambdas, decreasing=TRUE)
@@ -200,6 +202,20 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
     covered <- matrix(0L, nrow=NROW(X), ncol=1)
   }
 
+  if ( family == "c_shared") {
+    if (length(user_loss_function$lib_file_path) == 0) {
+      stop("unspecified shared lib file path")
+    } else {
+      if (!file.exists(user_loss_function$lib_file_path))
+        stop("misspecified shared lib file path.")
+    }
+    
+    if (length(user_loss_function$loss_name) == 0) 
+      stop("unspecified loss function name")
+    if (length(user_loss_function$grad_name) == 0) {
+      stop("unspecified grad function name")
+    }
+ } 
   ##,-----------------
   ##| Setting model id 
   ##`-----------------
@@ -252,6 +268,7 @@ sag <- function(X, y, lambdas, maxiter=NULL, w=NULL, alpha=NULL,
                     as.integer(maxiter),
                     as.integer(family_id),
                     as.integer(fit_alg_id),
+                    user_loss_function,
                     as.integer(sparse))
 
   ##,---------------------------
