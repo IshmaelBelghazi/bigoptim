@@ -1,6 +1,9 @@
 #include "glm_models.h"
-
 const static int one = 1;
+SEXP R_loss_fun;
+SEXP R_loss_fun_env;
+SEXP R_grad_fun;
+SEXP R_grad_fun_env;
 /*=============\
 | inititalizer |
 \=============*/
@@ -41,6 +44,17 @@ GlmModel make_GlmModel(SEXP w, SEXP family, SEXP ex_model_params) {
                                                     loss_grad_symbol);
     model.loss = model.dyn_shlib_container.dyn_loss_fun;
     model.grad = model.dyn_shlib_container.dyn_loss_grad_fun;
+    break;
+  case R:
+    /* Assigning R functions and environement to global variables */
+    
+    R_loss_fun = getListElement(ex_model_params, "R_loss_fun");
+    R_loss_fun_env = getListElement(ex_model_params, "R_loss_fun_env");
+    R_grad_fun = getListElement(ex_model_params, "R_grad_fun");
+    R_grad_fun_env = getListElement(ex_model_params, "R_grad_fun_env");
+    /* assigning R losses wrappers */
+    model.loss = R_loss_wrapper;
+    model.grad = R_loss_grad_wrapper;
     break;
   default:
     error("Unrecognized glm family");

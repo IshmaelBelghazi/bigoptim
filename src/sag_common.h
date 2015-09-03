@@ -11,8 +11,9 @@
 #include "cholmod.h"
 /* Utils */
 #include "utils.h"
-
-/* DEBUG */
+/* Shared variables */
+#include "shared.h"
+/* DEBUG   */
 #ifndef DEBUG
 #define DEBUG 0  // Enable/diasble traces.
 #endif

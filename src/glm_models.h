@@ -2,8 +2,10 @@
 #define GLM_MODELS_H_
 #include "sag_common.h"
 #include "sag_C_dynload_posix.h"
+#include "sag_R_losses.h"
+
 /* Avaible Glm models */
-typedef enum { GAUSSIAN, BINOMIAL, EXPONENTIAL, POISSON, C_SHARED } GlmType;
+typedef enum { GAUSSIAN, BINOMIAL, EXPONENTIAL, POISSON, C_SHARED, R } GlmType;
 /* Model struct */
 typedef struct {
   double *w; // Weights (p, 1)
