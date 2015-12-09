@@ -1,14 +1,20 @@
 Package: bigoptim
 Type: Package
-Title: Efficient Large Scale Convex Finite Sums Optimization 
+Title: Efficient Large Scale Convex Finite Sums Optimization
 Version: 0.0.0.9000
 Date: $Date$
 Authors@R: person("Mohamed Ishmael Diwan", "Belghazi", email = "ishmael.belghazi@gmail.com", role = c("aut", "cre"))
-Description: Implements and offers interfaces to the Stochastic Gradient Algorithm (Leroux et al. 2014).
+Description: Implements and offers interfaces to the Stochastic Gradient
+    Algorithm (Leroux et al. 2014).
 URL: http://www.github.com/IshmaelBelghazi/BigOptim
-Depends: R (>= 2.10), Matrix, methods
+Depends:
+    R (>= 2.10),
+    Matrix,
+    methods
 LinkingTo: Matrix
 License: MIT + file LICENSE
 LazyData: true
 NeedsCompilation: yes
-Suggests: testthat
+Suggests:
+    testthat
+RoxygenNote: 5.0.1
